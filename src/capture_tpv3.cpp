@@ -125,44 +125,58 @@ int tpv3_next(void (*on_frame)(const uint8_t* frame, uint32_t len)) {
     }
 
     int packets_processed = 0;
-    int frames_per_block = tpv3_req.tp_block_size / tpv3_req.tp_frame_size;
+    static unsigned int current_block = 0;  // Track current block
 
-    // Process all available blocks
-    for (unsigned int block = 0; block < tpv3_req.tp_block_nr; ++block) {
+    // Process available blocks (circular buffer)
+    for (unsigned int i = 0; i < tpv3_req.tp_block_nr; ++i) {
+        unsigned int block_idx = (current_block + i) % tpv3_req.tp_block_nr;
         struct tpacket_block_desc* block_desc = 
-            (struct tpacket_block_desc*)((char*)tpv3_ring_buffer + block * tpv3_req.tp_block_size);
+            (struct tpacket_block_desc*)((char*)tpv3_ring_buffer + block_idx * tpv3_req.tp_block_size);
 
         // Check if block has packets ready for user space
         if (!(block_desc->hdr.bh1.block_status & TP_STATUS_USER)) {
             continue;
         }
 
-        // Process all frames in this block
-        for (int frame = 0; frame < frames_per_block; ++frame) {
-            struct tpacket3_hdr* frame_hdr = 
-                (struct tpacket3_hdr*)((char*)block_desc + frame * tpv3_req.tp_frame_size);
+        // Process all packets in this block
+        // TPACKET_V3 uses variable-length frames, walk through them
+        uint8_t* block_start = (uint8_t*)block_desc;
+        uint32_t offset = block_desc->hdr.bh1.offset_to_first_pkt;
+        uint32_t num_packets = block_desc->hdr.bh1.num_pkts;
 
-            // Check if frame has data
-            if (frame_hdr->tp_status & TP_STATUS_USER) {
-                uint8_t* frame_data = (uint8_t*)frame_hdr + frame_hdr->tp_mac;
-                uint32_t frame_len = frame_hdr->tp_len;
-                
-                // Sanity check for frame length
-                if (frame_len > 65536 || frame_len == 0) {  // Reasonable max packet size
-                    continue;  // Skip invalid frames
-                }
+        for (uint32_t pkt = 0; pkt < num_packets; ++pkt) {
+            struct tpacket3_hdr* frame_hdr = (struct tpacket3_hdr*)(block_start + offset);
+            
+            // Validate frame header
+            if (offset >= tpv3_req.tp_block_size || 
+                frame_hdr->tp_next_offset == 0 ||
+                frame_hdr->tp_len == 0 || frame_hdr->tp_len > 65536) {
+                break;  // Invalid frame, stop processing this block
+            }
 
-                // Call user callback
-                on_frame(frame_data, frame_len);
-                packets_processed++;
+            // Extract frame data
+            uint8_t* frame_data = (uint8_t*)frame_hdr + frame_hdr->tp_mac;
+            uint32_t frame_len = frame_hdr->tp_len;
 
-                // Mark frame as processed
-                frame_hdr->tp_status = TP_STATUS_KERNEL;
+            // Call user callback
+            on_frame(frame_data, frame_len);
+            packets_processed++;
+
+            // Move to next frame
+            offset += frame_hdr->tp_next_offset;
+            
+            // Break if this was the last frame
+            if (pkt == num_packets - 1) {
+                break;
             }
         }
 
-        // Mark block as processed
+        // Mark block as processed and move to next
         block_desc->hdr.bh1.block_status = TP_STATUS_KERNEL;
+        current_block = (block_idx + 1) % tpv3_req.tp_block_nr;
+        
+        // Only process one block per call to avoid blocking
+        break;
     }
 
     return packets_processed;

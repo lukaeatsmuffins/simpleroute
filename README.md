@@ -9,6 +9,72 @@ A C++ project that recreates a router-like behaviour for a linux server.
 - **Build System**: CMake 3.10 or later
 - **Permissions**: Either `sudo` access or capability to set network capabilities
 
+## Quickstart
+
+This section provides a complete workflow to build, configure, and test the AFP application using network namespaces for safe experimentation.
+
+### 1. Build the Application
+
+```bash
+# Build the project
+make
+
+# The executable will be created at ./build/afp
+```
+
+### 2. Set Network Capabilities
+
+Grant the necessary network capabilities to avoid requiring sudo for each run:
+
+```bash
+sudo setcap cap_net_raw,cap_net_admin+ep ./build/afp
+```
+
+### 3. Setup Test Environment
+
+Create isolated network namespaces with veth pairs for safe testing:
+
+```bash
+# Setup namespaces and virtual interfaces
+sudo ./scripts/netns-up.sh
+```
+
+This creates two network namespaces (`gen` and `dut`) connected by veth pairs (`veth0` and `veth1`).
+
+### 4. Run AFP
+
+Test the three main modes of operation:
+
+```bash
+# Basic packet sniffing (simple mode)
+./build/afp sniff --in veth1
+
+# Advanced packet sniffing with TPACKET_V3
+./build/afp sniff3 --in veth1
+
+# Packet forwarding between interfaces
+./build/afp forward --in veth1 --out veth0
+```
+
+Open another terminal to generate test traffic in the `gen` namespace:
+
+```bash
+# Generate test traffic from the gen namespace
+sudo ip netns exec gen ping 192.168.1.2
+sudo ip netns exec gen curl -m 5 http://192.168.1.2:8080
+```
+
+### 5. Cleanup
+
+Remove the test environment when finished:
+
+```bash
+# Teardown namespaces and interfaces
+sudo ./scripts/netns-down.sh
+```
+
+The quickstart demonstrates AFP's packet capture and forwarding capabilities in a controlled environment without affecting your system's network configuration.
+
 ## Building
 
 ### Using Makefile (Recommended)

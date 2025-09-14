@@ -9,19 +9,37 @@
 #include <string>
 
 void print_usage(const char* program_name) {
+    std::cout << "AFP - Simple AF_PACKET Router" << std::endl;
+    std::cout << "A user-space packet processing application demonstrating AF_PACKET socket usage." << std::endl;
+    std::cout << std::endl;
     std::cout << "Usage: " << program_name << " <command> [options]" << std::endl;
     std::cout << std::endl;
-    std::cout << "Commands:" << std::endl;
-    std::cout << "  sniff --in <interface>   Sniff packets using recvfrom()" << std::endl;
-    std::cout << "  sniff3 --in <interface> [--rule <rule>] Sniff packets using TPACKET_V3" << std::endl;
-    std::cout << "  forward --in <iface_in> --out <iface_out> [--rule <rule>] Forward packets between interfaces" << std::endl;
+    std::cout << "MODES:" << std::endl;
+    std::cout << "  sniff    Basic packet capture using recvfrom() - simple socket-based capture" << std::endl;
+    std::cout << "           for educational purposes and basic packet inspection." << std::endl;
     std::cout << std::endl;
-    std::cout << "Options:" << std::endl;
-    std::cout << "  --rule <rule>           Rule for packet processing" << std::endl;
-    std::cout << "                         Format: proto=<proto>,dport=<port>,action=<action>" << std::endl;
-    std::cout << "                         Example: proto=udp,dport=53,action=DROP" << std::endl;
+    std::cout << "  sniff3   Advanced packet capture using TPACKET_V3 - high-performance capture" << std::endl;
+    std::cout << "           with zero-copy ring buffers, packet filtering, and action rules." << std::endl;
     std::cout << std::endl;
-    std::cout << "Examples:" << std::endl;
+    std::cout << "  forward  Packet forwarding between interfaces - captures packets from input" << std::endl;
+    std::cout << "           interface and forwards them to output interface with rule-based" << std::endl;
+    std::cout << "           filtering. Use only in controlled test environments." << std::endl;
+    std::cout << std::endl;
+    std::cout << "COMMANDS:" << std::endl;
+    std::cout << "  sniff --in <interface>" << std::endl;
+    std::cout << "  sniff3 --in <interface> [--rule <rule>]" << std::endl;
+    std::cout << "  forward --in <iface_in> --out <iface_out> [--rule <rule>]" << std::endl;
+    std::cout << std::endl;
+    std::cout << "OPTIONS:" << std::endl;
+    std::cout << "  --in <interface>        Input network interface name" << std::endl;
+    std::cout << "  --out <interface>       Output network interface name (forward mode only)" << std::endl;
+    std::cout << "  --rule <rule>           Packet processing rule (optional)" << std::endl;
+    std::cout << "                          Format: proto=<proto>,dport=<port>,action=<action>" << std::endl;
+    std::cout << "                          Proto: tcp, udp, icmp, any" << std::endl;
+    std::cout << "                          Action: PRINT, DROP, FORWARD" << std::endl;
+    std::cout << "                          Example: 'proto=udp,dport=53,action=DROP'" << std::endl;
+    std::cout << std::endl;
+    std::cout << "EXAMPLES:" << std::endl;
     std::cout << "  " << program_name << " sniff --in eth0" << std::endl;
     std::cout << "  " << program_name << " sniff3 --in veth1" << std::endl;
     std::cout << "  " << program_name << " sniff3 --in eth0 --rule 'proto=tcp,action=PRINT'" << std::endl;
@@ -29,8 +47,12 @@ void print_usage(const char* program_name) {
     std::cout << "  " << program_name << " forward --in veth1 --out veth2" << std::endl;
     std::cout << "  " << program_name << " forward --in eth0 --out eth1 --rule 'proto=tcp,action=FORWARD'" << std::endl;
     std::cout << std::endl;
-    std::cout << "Note: This program requires CAP_NET_RAW capability or sudo privileges." << std::endl;
-    std::cout << "WARNING: Forward mode is for controlled demos only (e.g., veth pairs)." << std::endl;
+    std::cout << "REQUIREMENTS:" << std::endl;
+    std::cout << "  This program requires CAP_NET_RAW and CAP_NET_ADMIN capabilities." << std::endl;
+    std::cout << "  Run with: sudo setcap cap_net_raw,cap_net_admin+ep ./build/afp" << std::endl;
+    std::cout << "  Or use sudo privileges: sudo " << program_name << " ..." << std::endl;
+    std::cout << std::endl;
+    std::cout << "WARNING: Forward mode is for controlled demonstrations only (e.g., veth pairs)." << std::endl;
     std::cout << "         Do not use on production networks without proper safeguards." << std::endl;
 }
 
@@ -128,50 +150,83 @@ void on_forward_frame(const uint8_t* frame, uint32_t len) {
 
 int main(int argc, char* argv[]) {
     if (argc < 2) {
-        print_usage(argv[0]);
+        std::cerr << "Error: No command specified." << std::endl;
+        std::cerr << "Use '" << argv[0] << " --help' for usage information." << std::endl;
         return 1;
     }
 
     std::string command = argv[1];
 
     if (command == "sniff") {
+        if (argc < 3) {
+            std::cerr << "Error: sniff command requires additional arguments." << std::endl;
+            std::cerr << "Usage: " << argv[0] << " sniff --in <interface>" << std::endl;
+            std::cerr << "Example: " << argv[0] << " sniff --in eth0" << std::endl;
+            return 1;
+        }
         if (argc < 4 || std::string(argv[2]) != "--in") {
             std::cerr << "Error: sniff command requires --in <interface> argument." << std::endl;
-            print_usage(argv[0]);
+            std::cerr << "Usage: " << argv[0] << " sniff --in <interface>" << std::endl;
+            std::cerr << "Example: " << argv[0] << " sniff --in eth0" << std::endl;
+            return 1;
+        }
+        if (argc > 4) {
+            std::cerr << "Error: sniff command does not accept additional arguments." << std::endl;
+            std::cerr << "Usage: " << argv[0] << " sniff --in <interface>" << std::endl;
             return 1;
         }
 
         std::string interface_name = argv[3];
+        if (interface_name.empty()) {
+            std::cerr << "Error: Interface name cannot be empty." << std::endl;
+            return 1;
+        }
+        
         return sniff_packets(interface_name);
     } else if (command == "sniff3") {
+        if (argc < 3) {
+            std::cerr << "Error: sniff3 command requires additional arguments." << std::endl;
+            std::cerr << "Usage: " << argv[0] << " sniff3 --in <interface> [--rule <rule>]" << std::endl;
+            std::cerr << "Example: " << argv[0] << " sniff3 --in veth1" << std::endl;
+            return 1;
+        }
         if (argc < 4 || std::string(argv[2]) != "--in") {
             std::cerr << "Error: sniff3 command requires --in <interface> argument." << std::endl;
-            print_usage(argv[0]);
+            std::cerr << "Usage: " << argv[0] << " sniff3 --in <interface> [--rule <rule>]" << std::endl;
+            std::cerr << "Example: " << argv[0] << " sniff3 --in veth1" << std::endl;
             return 1;
         }
 
         std::string interface_name = argv[3];
+        if (interface_name.empty()) {
+            std::cerr << "Error: Interface name cannot be empty." << std::endl;
+            return 1;
+        }
         
         // Parse optional --rule argument
         for (int i = 4; i < argc; i += 2) {
             if (i + 1 >= argc) {
-                std::cerr << "Error: --rule requires a value." << std::endl;
-                print_usage(argv[0]);
+                std::cerr << "Error: Option '" << argv[i] << "' requires a value." << std::endl;
+                std::cerr << "Example: --rule 'proto=tcp,action=PRINT'" << std::endl;
                 return 1;
             }
             
             if (std::string(argv[i]) == "--rule") {
                 int rule_result = rule_parse(argv[i + 1], &g_rule);
                 if (rule_result < 0) {
-                    std::cerr << "Error: Failed to parse rule '" << argv[i + 1] 
-                              << "' (error code: " << rule_result << ")" << std::endl;
+                    std::cerr << "Error: Failed to parse rule '" << argv[i + 1] << "'." << std::endl;
+                    std::cerr << "Rule format: proto=<proto>,dport=<port>,action=<action>" << std::endl;
+                    std::cerr << "Example: 'proto=udp,dport=53,action=DROP'" << std::endl;
+                    std::cerr << "Valid protocols: tcp, udp, icmp, any" << std::endl;
+                    std::cerr << "Valid actions: PRINT, DROP, FORWARD" << std::endl;
                     return 1;
                 }
                 std::cout << "Using rule: ";
                 rule_print(&g_rule);
             } else {
-                std::cerr << "Error: Unknown argument '" << argv[i] << "'" << std::endl;
-                print_usage(argv[0]);
+                std::cerr << "Error: Unknown option '" << argv[i] << "' for sniff3 command." << std::endl;
+                std::cerr << "Valid options: --rule" << std::endl;
+                std::cerr << "Usage: " << argv[0] << " sniff3 --in <interface> [--rule <rule>]" << std::endl;
                 return 1;
             }
         }
@@ -204,9 +259,16 @@ int main(int argc, char* argv[]) {
         tpv3_close();
         return 0;
     } else if (command == "forward") {
+        if (argc < 3) {
+            std::cerr << "Error: forward command requires additional arguments." << std::endl;
+            std::cerr << "Usage: " << argv[0] << " forward --in <iface_in> --out <iface_out> [--rule <rule>]" << std::endl;
+            std::cerr << "Example: " << argv[0] << " forward --in veth1 --out veth2" << std::endl;
+            return 1;
+        }
         if (argc < 6) {
             std::cerr << "Error: forward command requires --in <iface_in> --out <iface_out> arguments." << std::endl;
-            print_usage(argv[0]);
+            std::cerr << "Usage: " << argv[0] << " forward --in <iface_in> --out <iface_out> [--rule <rule>]" << std::endl;
+            std::cerr << "Example: " << argv[0] << " forward --in veth1 --out veth2" << std::endl;
             return 1;
         }
 
@@ -215,31 +277,58 @@ int main(int argc, char* argv[]) {
 
         // Parse --in and --out arguments
         for (int i = 2; i < argc - 1; i += 2) {
+            if (i + 1 >= argc) {
+                std::cerr << "Error: Option '" << argv[i] << "' requires a value." << std::endl;
+                return 1;
+            }
+            
             if (std::string(argv[i]) == "--in") {
                 iface_in = argv[i + 1];
+                if (iface_in.empty()) {
+                    std::cerr << "Error: Input interface name cannot be empty." << std::endl;
+                    return 1;
+                }
                 found_in = true;
             } else if (std::string(argv[i]) == "--out") {
                 iface_out = argv[i + 1];
+                if (iface_out.empty()) {
+                    std::cerr << "Error: Output interface name cannot be empty." << std::endl;
+                    return 1;
+                }
                 found_out = true;
             } else if (std::string(argv[i]) == "--rule") {
                 int rule_result = rule_parse(argv[i + 1], &g_rule);
                 if (rule_result < 0) {
-                    std::cerr << "Error: Failed to parse rule '" << argv[i + 1] 
-                              << "' (error code: " << rule_result << ")" << std::endl;
+                    std::cerr << "Error: Failed to parse rule '" << argv[i + 1] << "'." << std::endl;
+                    std::cerr << "Rule format: proto=<proto>,dport=<port>,action=<action>" << std::endl;
+                    std::cerr << "Example: 'proto=tcp,action=FORWARD'" << std::endl;
+                    std::cerr << "Valid protocols: tcp, udp, icmp, any" << std::endl;
+                    std::cerr << "Valid actions: PRINT, DROP, FORWARD" << std::endl;
                     return 1;
                 }
                 std::cout << "Using rule: ";
                 rule_print(&g_rule);
             } else {
-                std::cerr << "Error: Unknown argument '" << argv[i] << "'" << std::endl;
-                print_usage(argv[0]);
+                std::cerr << "Error: Unknown option '" << argv[i] << "' for forward command." << std::endl;
+                std::cerr << "Valid options: --in, --out, --rule" << std::endl;
+                std::cerr << "Usage: " << argv[0] << " forward --in <iface_in> --out <iface_out> [--rule <rule>]" << std::endl;
                 return 1;
             }
         }
 
-        if (!found_in || !found_out) {
-            std::cerr << "Error: forward command requires both --in and --out arguments." << std::endl;
-            print_usage(argv[0]);
+        if (!found_in) {
+            std::cerr << "Error: forward command requires --in <interface> argument." << std::endl;
+            std::cerr << "Usage: " << argv[0] << " forward --in <iface_in> --out <iface_out> [--rule <rule>]" << std::endl;
+            return 1;
+        }
+        if (!found_out) {
+            std::cerr << "Error: forward command requires --out <interface> argument." << std::endl;
+            std::cerr << "Usage: " << argv[0] << " forward --in <iface_in> --out <iface_out> [--rule <rule>]" << std::endl;
+            return 1;
+        }
+        if (iface_in == iface_out) {
+            std::cerr << "Error: Input and output interfaces cannot be the same (" << iface_in << ")." << std::endl;
+            std::cerr << "This would create a forwarding loop." << std::endl;
             return 1;
         }
 
@@ -281,12 +370,13 @@ int main(int argc, char* argv[]) {
         tpv3_close();
         tx_close();
         return 0;
-    } else if (command == "--help" || command == "-h") {
+    } else if (command == "--help" || command == "-h" || command == "help") {
         print_usage(argv[0]);
         return 0;
     } else {
         std::cerr << "Error: Unknown command '" << command << "'." << std::endl;
-        print_usage(argv[0]);
+        std::cerr << "Valid commands: sniff, sniff3, forward" << std::endl;
+        std::cerr << "Use '" << argv[0] << " --help' for detailed usage information." << std::endl;
         return 1;
     }
 }
