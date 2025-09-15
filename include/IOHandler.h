@@ -10,7 +10,7 @@
 #include <condition_variable>
 
 #define IOHANDLER_DEFAULT_BUFFER_SIZE 1000
-
+#define IOHANDLER_POLL_TIMEOUT_MS 1000
 /**
  * IOHandler - Singleton class for raw packet capture.
  *
@@ -48,6 +48,12 @@ private:
     // Write packet data to buffer.
     void writePacket(const std::vector<uint8_t>& packet);
     
+    // Methods to initiate a socket connection.
+    bool openTPV3(const std::string& interface_name);
+    void closeTPV3();
+    int pollTPV3(int timeout_ms);
+    int processTPV3Packets();
+    
     // Member variables
     static std::unique_ptr<IOHandler> instance_;
     static std::mutex instance_mutex_;
@@ -64,6 +70,12 @@ private:
     
     std::string interface_name_;
     bool capturing_;
+    
+    // TPACKET_V3 state
+    int tpv3_socket_;
+    void* tpv3_ring_buffer_;
+    void* tpv3_req_;  // Opaque pointer to tpacket_req3
+    bool tpv3_open_;
     
     // Capture thread management
     std::thread capture_thread_;
