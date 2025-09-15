@@ -15,8 +15,14 @@ include_directories(include)
 # Find source files
 file(GLOB_RECURSE SOURCES "src/*.cpp")
 
+# Find required packages
+find_package(Threads REQUIRED)
+
 # Create executable
 add_executable(afp ${SOURCES})
+
+# Link libraries
+target_link_libraries(afp Threads::Threads)
 
 # Install target
 install(TARGETS afp DESTINATION bin)
