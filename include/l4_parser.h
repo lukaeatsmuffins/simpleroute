@@ -12,6 +12,17 @@
 class L4Parser {
 public:
     /**
+     * Protocol enumeration for L4 protocols
+     */
+    enum Protocol : uint8_t {
+        PROTO_ICMP = 1,
+        PROTO_TCP = 6,
+        PROTO_UDP = 17,
+        PROTO_ICMPV6 = 58,
+        PROTO_OSPF = 89,
+        PROTO_SCTP = 132
+    };
+    /**
      * Parse transport layer protocol and return string representation
      * @param packet_data Vector containing the packet data
      * @param start_offset Offset in the vector where L4 header starts
