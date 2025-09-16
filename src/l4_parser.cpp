@@ -2,71 +2,123 @@
 #include <sstream>
 #include <arpa/inet.h>
 
-std::string L4Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_offset, uint8_t protocol) {
+L4Info L4Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_offset, uint8_t protocol) {
+    L4Info result = {};
+    result.protocol_type = protocol;
+    result.protocol_name = get_protocol_name(protocol);
+    
     switch (protocol) {
         case PROTO_TCP: return parse_tcp(packet_data, start_offset);
         case PROTO_UDP: return parse_udp(packet_data, start_offset);
         case PROTO_ICMP: case PROTO_ICMPV6: return parse_icmp(packet_data, start_offset);
-        default: return get_protocol_name(protocol);
+        default: 
+            result.parsed = false;
+            result.info_string = result.protocol_name;
+            return result;
     }
 }
 
-std::string L4Parser::parse_tcp(const std::vector<uint8_t>& packet_data, size_t start_offset) {
+L4Info L4Parser::parse_tcp(const std::vector<uint8_t>& packet_data, size_t start_offset) {
+    L4Info result = {};
+    result.protocol_type = PROTO_TCP;
+    result.protocol_name = "TCP";
+    
     if (packet_data.size() < start_offset + 20) {
-        return "";
+        result.parsed = false;
+        return result;
     }
 
     const uint8_t* data = packet_data.data() + start_offset;
     
-    uint16_t src_port = ntohs(*(uint16_t*)(data));
-    uint16_t dst_port = ntohs(*(uint16_t*)(data + 2));
-    uint32_t seq = ntohl(*(uint32_t*)(data + 4));
-    uint8_t flags = data[13];
+    result.src_port = ntohs(*(uint16_t*)(data));
+    result.dst_port = ntohs(*(uint16_t*)(data + 2));
+    result.src_service = get_service_name(result.src_port);
+    result.dst_service = get_service_name(result.dst_port);
+    result.sequence_number = ntohl(*(uint32_t*)(data + 4));
+    result.ack_number = ntohl(*(uint32_t*)(data + 8));
+    result.tcp_flags = data[13];
+    result.tcp_flags_string = tcp_flags_to_string(result.tcp_flags);
+    result.window_size = ntohs(*(uint16_t*)(data + 14));
+    
     uint8_t data_off = (data[12] >> 4) & 0x0F;
+    result.header_length = data_off * 4;
+    result.has_tcp_options = (data_off > 5);
+    result.next_layer_offset = start_offset + result.header_length;
     
+    // Create string representation
     std::ostringstream oss;
-    oss << "TCP " << get_service_name(src_port) << " -> " << get_service_name(dst_port)
-        << " [" << tcp_flags_to_string(flags) << "] seq:" << seq;
+    oss << "TCP " << result.src_service << " -> " << result.dst_service
+        << " [" << result.tcp_flags_string << "] seq:" << result.sequence_number;
     
-    if (data_off > 5) {
+    if (result.has_tcp_options) {
         oss << " +opts";
     }
     
-    return oss.str();
+    result.info_string = oss.str();
+    result.parsed = true;
+    
+    return result;
 }
 
-std::string L4Parser::parse_udp(const std::vector<uint8_t>& packet_data, size_t start_offset) {
+L4Info L4Parser::parse_udp(const std::vector<uint8_t>& packet_data, size_t start_offset) {
+    L4Info result = {};
+    result.protocol_type = PROTO_UDP;
+    result.protocol_name = "UDP";
+    
     if (packet_data.size() < start_offset + 8) {
-        return "";
+        result.parsed = false;
+        return result;
     }
 
     const uint8_t* data = packet_data.data() + start_offset;
     
-    uint16_t src_port = ntohs(*(uint16_t*)(data));
-    uint16_t dst_port = ntohs(*(uint16_t*)(data + 2));
-    uint16_t length = ntohs(*(uint16_t*)(data + 4));
+    result.src_port = ntohs(*(uint16_t*)(data));
+    result.dst_port = ntohs(*(uint16_t*)(data + 2));
+    result.src_service = get_service_name(result.src_port);
+    result.dst_service = get_service_name(result.dst_port);
+    result.udp_length = ntohs(*(uint16_t*)(data + 4));
+    result.header_length = 8;
+    result.next_layer_offset = start_offset + 8;
     
+    // Create string representation
     std::ostringstream oss;
-    oss << "UDP " << get_service_name(src_port) << " -> " << get_service_name(dst_port)
-        << " len:" << length;
+    oss << "UDP " << result.src_service << " -> " << result.dst_service
+        << " len:" << result.udp_length;
     
-    return oss.str();
+    result.info_string = oss.str();
+    result.parsed = true;
+    
+    return result;
 }
 
-std::string L4Parser::parse_icmp(const std::vector<uint8_t>& packet_data, size_t start_offset) {
+L4Info L4Parser::parse_icmp(const std::vector<uint8_t>& packet_data, size_t start_offset) {
+    L4Info result = {};
+    result.protocol_type = PROTO_ICMP;
+    result.protocol_name = "ICMP";
+    
     if (packet_data.size() < start_offset + 8) {
-        return "";
+        result.parsed = false;
+        return result;
     }
 
     const uint8_t* data = packet_data.data() + start_offset;
     
-    uint8_t type = data[0];
-    uint8_t code = data[1];
+    result.icmp_type = data[0];
+    result.icmp_code = data[1];
+    result.src_port = 0;
+    result.dst_port = 0;
+    result.header_length = 8;
+    result.next_layer_offset = start_offset + 8;
     
+    // Create string representation
     std::ostringstream oss;
-    oss << "ICMP type:" << static_cast<unsigned>(type) << " code:" << static_cast<unsigned>(code);
+    oss << "ICMP type:" << static_cast<unsigned>(result.icmp_type) 
+        << " code:" << static_cast<unsigned>(result.icmp_code);
     
-    return oss.str();
+    result.info_string = oss.str();
+    result.parsed = true;
+    
+    return result;
 }
 
 std::string L4Parser::tcp_flags_to_string(uint8_t flags) {

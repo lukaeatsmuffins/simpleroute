@@ -5,6 +5,35 @@
 #include <stdint.h>
 
 /**
+ * Layer 2 (Ethernet) information structure
+ */
+struct L2Info {
+    // Parsing success
+    bool parsed;                    // Whether parsing was successful
+    
+    // MAC addresses
+    std::string src_mac;            // Source MAC address (XX:XX:XX:XX:XX:XX)
+    std::string dst_mac;            // Destination MAC address
+    
+    // Protocol information
+    uint16_t ether_type;            // EtherType field
+    std::string protocol_name;      // Protocol name (IPv4, IPv6, ARP, etc.)
+    
+    // VLAN information
+    bool has_vlan;                  // VLAN tag present
+    uint16_t vlan_id;               // VLAN ID (if has_vlan is true)
+    uint8_t vlan_priority;          // VLAN priority
+    uint16_t inner_ether_type;      // EtherType after VLAN tag
+    
+    // Header information
+    uint32_t header_length;         // L2 header length in bytes
+    uint32_t next_layer_offset;     // Offset to next layer header
+    
+    // String representation
+    std::string info_string;        // Formatted string representation
+};
+
+/**
  * Layer 2 (Ethernet) Parser
  * 
  * Stateless parser for Ethernet frames and VLAN tags
@@ -12,12 +41,12 @@
 class L2Parser {
 public:
     /**
-     * Parse Ethernet frame and return string representation
+     * Parse Ethernet frame and return detailed information
      * @param packet_data Vector containing the packet data
      * @param start_offset Offset in the vector where L2 header starts (usually 0)
-     * @return String representation of Ethernet frame, or empty string if parsing fails
+     * @return L2Info structure with all extracted information
      */
-    static std::string parse(const std::vector<uint8_t>& packet_data, size_t start_offset = 0);
+    static L2Info parse(const std::vector<uint8_t>& packet_data, size_t start_offset = 0);
 
 private:
     /**
