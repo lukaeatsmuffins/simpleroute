@@ -8,6 +8,7 @@
 #include <chrono>
 #include <cstdio>
 #include <vector>
+#include <fstream>
 
 void test_iohandler(); 
 void test_parsers();
@@ -36,6 +37,15 @@ int main() {
     }
     std::cout << "Packet capture started successfully!" << std::endl;
     
+    // Open capture file for writing
+    std::ofstream capture_file("packets.capt");
+    if (!capture_file.is_open()) {
+        std::cerr << "Failed to open capture file!" << std::endl;
+        handler.stopCapture();
+        return 1;
+    }
+    std::cout << "Capture file opened: packets.capt" << std::endl;
+    
     // Main consumer loop - parse and display packets
     std::cout << "\n=== Packet Processing Pipeline Active ===" << std::endl;
     std::cout << "Monitoring packets for 30 seconds..." << std::endl;
@@ -57,6 +67,10 @@ int main() {
             // Parse the packet using our parser
             ParsedPacket parsed = Parser::parse_packet(packet, 0);
             
+            // Serialize and write packet to capture file
+            std::string serialized = Parser::serialize_packet(parsed);
+            capture_file << serialized << std::endl;
+            
             // Display basic packet information
             std::cout << "\n--- Packet #" << packet_count << " ---" << std::endl;
             std::cout << "Size: " << packet.size() << " bytes" << std::endl;
@@ -74,7 +88,9 @@ int main() {
     // Stop capture and cleanup
     std::cout << "\n=== Stopping Packet Capture ===" << std::endl;
     handler.stopCapture();
+    capture_file.close();
     std::cout << "Processed " << packet_count << " packets in 30 seconds" << std::endl;
+    std::cout << "Packets saved to packets.capt" << std::endl;
     std::cout << "Pipeline test completed successfully!" << std::endl;
     
     return 0;

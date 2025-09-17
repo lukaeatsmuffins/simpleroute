@@ -52,12 +52,33 @@ struct L3Info {
 class L3Parser {
 public:
     /**
+     * IP version enumeration
+     */
+    enum IPVersion : uint8_t {
+        IPV4 = 4,
+        IPV6 = 6
+    };
+    /**
      * Parse IP packet (IPv4 or IPv6) and return detailed information
      * @param packet_data Vector containing the packet data
      * @param start_offset Offset in the vector where L3 header starts
      * @return L3Info structure with all extracted information
      */
     static L3Info parse(const std::vector<uint8_t>& packet_data, size_t start_offset);
+    
+    /**
+     * Serialize L3 information to capture format
+     * @param l3_info The L3 information to serialize
+     * @return Serialized string in format "IPv4/IPv6;src_ip;dst_ip;protocol_num;ttl/hop_limit;length"
+     */
+    static std::string serialize(const L3Info& l3_info);
+
+    /**
+     * Deserialize L3 information from capture format
+     * @param layer_string The serialized L3 layer string
+     * @return L3Info structure with deserialized information
+     */
+    static L3Info deserialize(const std::string& layer_string);
 
 private:
     /**

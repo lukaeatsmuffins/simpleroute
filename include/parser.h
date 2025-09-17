@@ -109,6 +109,21 @@ public:
      * @return Protocol stack (e.g., "Ethernet/IPv4/TCP")
      */
     static std::string get_protocol_stack(const ParsedPacket& parsed);
+    
+    /**
+     * Serialize packet to capture file format
+     * Format: "L2Proto;Protodata...|L3proto;Protodata...|L4proto;Protodata...|"
+     * @param parsed The parsed packet structure
+     * @return Serialized packet string for .capt file
+     */
+    static std::string serialize_packet(const ParsedPacket& parsed);
+    
+    /**
+     * Deserialize packet from capture file format
+     * @param line Single line from .capt file
+     * @return ParsedPacket structure (reconstructed for stats processing)
+     */
+    static ParsedPacket deserialize_packet(const std::string& line);
 
 private:
     /**

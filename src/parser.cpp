@@ -251,3 +251,77 @@ void Parser::calculate_payload_info(const std::vector<uint8_t>& packet_data, siz
         result.payload_length = 0;
     }
 }
+
+std::string Parser::serialize_packet(const ParsedPacket& parsed) {
+    std::ostringstream oss;
+    
+    // Use layer-specific serialization methods
+    std::string l2_serialized = L2Parser::serialize(parsed.l2);
+    if (!l2_serialized.empty()) {
+        oss << l2_serialized << "|";
+    }
+    
+    std::string l3_serialized = L3Parser::serialize(parsed.l3);
+    if (!l3_serialized.empty()) {
+        oss << l3_serialized << "|";
+    }
+    
+    std::string l4_serialized = L4Parser::serialize(parsed.l4);
+    if (!l4_serialized.empty()) {
+        oss << l4_serialized << "|";
+    }
+    
+    // Add packet metadata
+    oss << "META;" << parsed.total_length << ";" << parsed.payload_length;
+    
+    return oss.str();
+}
+
+ParsedPacket Parser::deserialize_packet(const std::string& line) {
+    ParsedPacket result = {};
+    
+    std::vector<std::string> layers;
+    std::string current_layer;
+    
+    // Split by | to get layers
+    for (char c : line) {
+        if (c == '|') {
+            if (!current_layer.empty()) {
+                layers.push_back(current_layer);
+                current_layer.clear();
+            }
+        } else {
+            current_layer += c;
+        }
+    }
+    
+    // Deserialize layers by index (L2, L3, L4, META)
+    if (layers.size() >= 1) result.l2 = L2Parser::deserialize(layers[0]);
+    if (layers.size() >= 2) result.l3 = L3Parser::deserialize(layers[1]);
+    if (layers.size() >= 3) result.l4 = L4Parser::deserialize(layers[2]);
+    
+    // Handle metadata (last layer)
+    if (layers.size() >= 4 && layers[3].substr(0, 4) == "META") {
+        std::vector<std::string> fields;
+        std::string current_field;
+        
+        for (char c : layers[3]) {
+            if (c == ';') {
+                fields.push_back(current_field);
+                current_field.clear();
+            } else {
+                current_field += c;
+            }
+        }
+        if (!current_field.empty()) {
+            fields.push_back(current_field);
+        }
+        
+        if (fields.size() >= 3) {
+            result.total_length = std::stoi(fields[1]);
+            result.payload_length = std::stoi(fields[2]);
+        }
+    }
+    
+    return result;
+}

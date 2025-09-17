@@ -152,6 +152,93 @@ std::string L4Parser::get_service_name(uint16_t port) {
     }
 }
 
+std::string L4Parser::serialize(const L4Info& l4_info) {
+    if (!l4_info.parsed) {
+        return "";
+    }
+    
+    std::ostringstream oss;
+    oss << l4_info.protocol_name << ";" << l4_info.src_port << ";" << l4_info.dst_port;
+    
+    // Add protocol-specific data
+    switch (static_cast<Protocol>(l4_info.protocol_type)) {
+        case Protocol::PROTO_TCP:
+            oss << ";" << l4_info.tcp_flags_string << ";" << l4_info.window_size;
+            break;
+        case Protocol::PROTO_UDP:
+            oss << ";" << l4_info.udp_length;
+            break;
+        case Protocol::PROTO_ICMP:
+            oss << ";" << static_cast<int>(l4_info.icmp_type) << ";" << static_cast<int>(l4_info.icmp_code);
+            break;
+        case Protocol::PROTO_ICMPV6:
+            oss << ";" << static_cast<int>(l4_info.icmp_type) << ";" << static_cast<int>(l4_info.icmp_code);
+            break;
+        default:
+            // No additional data for other protocols
+            break;
+    }
+    
+    return oss.str();
+}
+
+L4Info L4Parser::deserialize(const std::string& layer_string) {
+    L4Info result = {};
+    
+    std::vector<std::string> fields;
+    std::string current_field;
+    
+    // Split by ; to get fields
+    for (char c : layer_string) {
+        if (c == ';') {
+            fields.push_back(current_field);
+            current_field.clear();
+        } else {
+            current_field += c;
+        }
+    }
+    if (!current_field.empty()) {
+        fields.push_back(current_field);
+    }
+    
+    if (fields.size() >= 4) {
+        std::string protocol_name = fields[0];
+        
+        result.parsed = true;
+        result.protocol_name = protocol_name;
+        result.protocol_type = static_cast<uint8_t>(get_protocol_type(protocol_name));
+        result.src_port = std::stoi(fields[1]);
+        result.dst_port = std::stoi(fields[2]);
+        
+        // Add protocol-specific data using enum-based switch
+        switch (static_cast<Protocol>(result.protocol_type)) {
+            case PROTO_TCP:
+                if (fields.size() >= 5) {
+                    result.tcp_flags_string = fields[3];
+                    result.window_size = std::stoi(fields[4]);
+                }
+                break;
+            case PROTO_UDP:
+                if (fields.size() >= 4) {
+                    result.udp_length = std::stoi(fields[3]);
+                }
+                break;
+            case PROTO_ICMP:
+            case PROTO_ICMPV6:
+                if (fields.size() >= 5) {
+                    result.icmp_type = std::stoi(fields[3]);
+                    result.icmp_code = std::stoi(fields[4]);
+                }
+                break;
+            default:
+                // No additional data for other protocols
+                break;
+        }
+    }
+    
+    return result;
+}
+
 std::string L4Parser::get_protocol_name(uint8_t protocol) {
     switch (protocol) {
         case PROTO_ICMP: return "ICMP";
@@ -162,4 +249,16 @@ std::string L4Parser::get_protocol_name(uint8_t protocol) {
         case PROTO_SCTP: return "SCTP";
         default: return "proto-" + std::to_string(protocol);
     }
+}
+
+L4Parser::Protocol L4Parser::get_protocol_type(const std::string& protocol_name) {
+    if (protocol_name == "TCP") return PROTO_TCP;
+    if (protocol_name == "UDP") return PROTO_UDP;
+    if (protocol_name == "ICMP") return PROTO_ICMP;
+    if (protocol_name == "ICMPv6") return PROTO_ICMPV6;
+    if (protocol_name == "OSPF") return PROTO_OSPF;
+    if (protocol_name == "SCTP") return PROTO_SCTP;
+    
+    // Default to ICMP for unknown protocols
+    return PROTO_ICMP;
 }

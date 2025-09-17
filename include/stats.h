@@ -116,12 +116,34 @@ public:
      */
     bool matchesFilter(const ParsedPacket& packet) const;
     
-    /**
-     * Apply filter to a collection of packets and return statistics
-     * @param packets Vector of parsed packets to filter
-     * @return FilterStats containing count and bytes of matching packets
-     */
-    FilterStats applyFilter(const std::vector<ParsedPacket>& packets) const;
+            /**
+             * Apply filter to packets from a capture file and return statistics
+             * @param filename Path to .capt file
+             * @return FilterStats containing count and bytes of matching packets
+             */
+            FilterStats applyFilter(const std::string& filename) const;
+            
+            /**
+             * Group packets from a capture file by specified criteria
+             * @param filename Path to .capt file
+             * @param group_by Criteria to group by
+             * @return Map of group key to packet count
+             */
+            std::unordered_map<std::string, uint64_t> groupPackets(
+                const std::string& filename, 
+                GroupBy group_by
+            ) const;
+            
+            /**
+             * Get formatted grouping results from capture file
+             * @param filename Path to .capt file
+             * @param group_by Criteria to group by
+             * @return Formatted string showing groups and counts
+             */
+            std::string getGroupingReport(
+                const std::string& filename, 
+                GroupBy group_by
+            ) const;
     
     /**
      * Get current filter criteria
@@ -134,30 +156,6 @@ public:
      * @return true if any filter criteria is set
      */
     bool hasActiveFilter() const;
-    
-    // ===== GROUPING MODE =====
-    
-    /**
-     * Group packets by specified criteria and return counts per group
-     * @param packets Vector of parsed packets to group
-     * @param group_by Criteria to group by
-     * @return Map of group key to packet count
-     */
-    std::unordered_map<std::string, uint64_t> groupPackets(
-        const std::vector<ParsedPacket>& packets, 
-        GroupBy group_by
-    ) const;
-    
-    /**
-     * Get formatted grouping results
-     * @param packets Vector of parsed packets to group
-     * @param group_by Criteria to group by
-     * @return Formatted string showing groups and counts
-     */
-    std::string getGroupingReport(
-        const std::vector<ParsedPacket>& packets, 
-        GroupBy group_by
-    ) const;
 
 private:
     FilterCriteria filter_;
@@ -193,10 +191,21 @@ private:
      */
     std::string getGroupingKey(const ParsedPacket& packet, GroupBy group_by) const;
     
-    /**
-     * Get packet size range string for PACKET_SIZE grouping
-     * @param packet_size The packet size
-     * @return Size range string (e.g., "64-128", "1024+")
-     */
-    std::string getSizeRange(uint32_t packet_size) const;
+            /**
+             * Get packet size range string for PACKET_SIZE grouping
+             * @param packet_size The packet size
+             * @return Size range string (e.g., "64-128", "1024+")
+             */
+            std::string getSizeRange(uint32_t packet_size) const;
+            
+            /**
+             * Format grouping results into a readable string
+             * @param groups Map of group keys to counts
+             * @param group_by The grouping criteria used
+             * @return Formatted string showing groups and counts
+             */
+            std::string formatGroupingResults(
+                const std::unordered_map<std::string, uint64_t>& groups, 
+                GroupBy group_by
+            ) const;
 };

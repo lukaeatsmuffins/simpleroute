@@ -47,6 +47,20 @@ public:
      * @return L2Info structure with all extracted information
      */
     static L2Info parse(const std::vector<uint8_t>& packet_data, size_t start_offset = 0);
+    
+    /**
+     * Serialize L2 information to capture format
+     * @param l2_info The L2 information to serialize
+     * @return Serialized string in format "ETH;src_mac;dst_mac;vlan_id;ethertype"
+     */
+    static std::string serialize(const L2Info& l2_info);
+
+    /**
+     * Deserialize L2 information from capture format
+     * @param layer_string The serialized L2 layer string
+     * @return L2Info structure with deserialized information
+     */
+    static L2Info deserialize(const std::string& layer_string);
 
 private:
     /**

@@ -115,6 +115,76 @@ L3Info L3Parser::parse_ipv6(const std::vector<uint8_t>& packet_data, size_t star
     return result;
 }
 
+std::string L3Parser::serialize(const L3Info& l3_info) {
+    if (!l3_info.parsed) {
+        return "";
+    }
+    
+    std::ostringstream oss;
+    
+    switch (static_cast<IPVersion>(l3_info.ip_version)) {
+        case IPVersion::IPV4:
+            oss << "IPv4;" << l3_info.src_ip << ";" << l3_info.dst_ip << ";";
+            oss << static_cast<int>(l3_info.next_protocol) << ";" << static_cast<int>(l3_info.ttl) << ";" << l3_info.total_length;
+            break;
+        case IPVersion::IPV6:
+            oss << "IPv6;" << l3_info.src_ip << ";" << l3_info.dst_ip << ";";
+            oss << static_cast<int>(l3_info.next_protocol) << ";" << static_cast<int>(l3_info.hop_limit) << ";" << l3_info.payload_length;
+            break;
+        default:
+            // Unknown IP version
+            break;
+    }
+    
+    return oss.str();
+}
+
+L3Info L3Parser::deserialize(const std::string& layer_string) {
+    L3Info result = {};
+    
+    std::vector<std::string> fields;
+    std::string current_field;
+    
+    // Split by ; to get fields
+    for (char c : layer_string) {
+        if (c == ';') {
+            fields.push_back(current_field);
+            current_field.clear();
+        } else {
+            current_field += c;
+        }
+    }
+    if (!current_field.empty()) {
+        fields.push_back(current_field);
+    }
+    
+    if (fields.size() >= 6) {
+        std::string protocol = fields[0];
+        
+        if (protocol == "IPv4") {
+            result.parsed = true;
+            result.ip_version = IPVersion::IPV4;
+            result.src_ip = fields[1];
+            result.dst_ip = fields[2];
+            result.next_protocol = std::stoi(fields[3]);
+            result.ttl = std::stoi(fields[4]);
+            result.total_length = std::stoi(fields[5]);
+            result.protocol_name = "IPv4";
+        } else if (protocol == "IPv6") {
+            result.parsed = true;
+            result.ip_version = IPVersion::IPV6;
+            result.src_ip = fields[1];
+            result.dst_ip = fields[2];
+            result.next_protocol = std::stoi(fields[3]);
+            result.hop_limit = std::stoi(fields[4]);
+            result.payload_length = std::stoi(fields[5]);
+            result.protocol_name = "IPv6";
+        }
+    }
+    
+    return result;
+}
+
 std::string L3Parser::ipv4_to_string(const uint32_t addr) {
     struct in_addr in_addr;
     in_addr.s_addr = addr;

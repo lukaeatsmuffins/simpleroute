@@ -65,6 +65,58 @@ L2Info L2Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_off
     return result;
 }
 
+std::string L2Parser::serialize(const L2Info& l2_info) {
+    if (!l2_info.parsed) {
+        return "";
+    }
+    
+    std::ostringstream oss;
+    oss << "ETH;" << l2_info.src_mac << ";" << l2_info.dst_mac << ";";
+    
+    if (l2_info.has_vlan) {
+        oss << l2_info.vlan_id << ";" << l2_info.inner_ether_type;
+    } else {
+        oss << "0;" << l2_info.ether_type;
+    }
+    
+    return oss.str();
+}
+
+L2Info L2Parser::deserialize(const std::string& layer_string) {
+    L2Info result = {};
+    
+    std::vector<std::string> fields;
+    std::string current_field;
+    
+    // Split by ; to get fields
+    for (char c : layer_string) {
+        if (c == ';') {
+            fields.push_back(current_field);
+            current_field.clear();
+        } else {
+            current_field += c;
+        }
+    }
+    if (!current_field.empty()) {
+        fields.push_back(current_field);
+    }
+    
+    if (fields.size() >= 5 && fields[0] == "ETH") {
+        result.parsed = true;
+        result.src_mac = fields[1];
+        result.dst_mac = fields[2];
+        result.vlan_id = std::stoi(fields[3]);
+        result.has_vlan = (result.vlan_id != 0);
+        result.ether_type = std::stoi(fields[4]);
+        if (result.has_vlan) {
+            result.inner_ether_type = result.ether_type;
+        }
+        result.protocol_name = "Ethernet";
+    }
+    
+    return result;
+}
+
 std::string L2Parser::mac_to_string(const uint8_t mac[6]) {
     std::ostringstream oss;
     oss << std::hex << std::setfill('0');

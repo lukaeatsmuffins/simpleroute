@@ -73,6 +73,20 @@ public:
      * @return L4Info structure with all extracted information
      */
     static L4Info parse(const std::vector<uint8_t>& packet_data, size_t start_offset, uint8_t protocol);
+    
+    /**
+     * Serialize L4 information to capture format
+     * @param l4_info The L4 information to serialize
+     * @return Serialized string in format "Protocol;src_port;dst_port;protocol_specific_data"
+     */
+    static std::string serialize(const L4Info& l4_info);
+
+    /**
+     * Deserialize L4 information from capture format
+     * @param layer_string The serialized L4 layer string
+     * @return L4Info structure with deserialized information
+     */
+    static L4Info deserialize(const std::string& layer_string);
 
 private:
     /**
@@ -119,4 +133,11 @@ private:
      * @return Protocol name string
      */
     static std::string get_protocol_name(uint8_t protocol);
+
+    /**
+     * Get protocol type enum from protocol name
+     * @param protocol_name Protocol name string (TCP, UDP, ICMP, etc.)
+     * @return Protocol enum value
+     */
+    static Protocol get_protocol_type(const std::string& protocol_name);
 };
