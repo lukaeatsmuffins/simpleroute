@@ -14,15 +14,69 @@ void test_parsers();
 void test_parser_class();
 
 int main() {
-    std::cout << "=== Testing Packet Parsers ===" << std::endl;
-    test_parsers();
+    std::cout << "=== Starting Packet Processing Pipeline ===" << std::endl;
     
-    std::cout << "\n=== Testing Parser Class ===" << std::endl;
-    test_parser_class();
+    // Initialize IOHandler singleton
+    IOHandler& handler = IOHandler::getInstance();
     
-    std::cout << "\n=== Testing IOHandler ===" << std::endl;
-    test_iohandler();
-
+    // Configure buffer size for packet storage
+    bool buffer_set = handler.setBufferSize(1000);
+    if (!buffer_set) {
+        std::cerr << "Failed to set buffer size!" << std::endl;
+        return 1;
+    }
+    std::cout << "Buffer size configured successfully" << std::endl;
+    
+    // Start packet capture on lo interface (loopback)
+    std::cout << "Starting packet capture on lo (loopback)..." << std::endl;
+    bool capture_started = handler.startCapture("lo");
+    if (!capture_started) {
+        std::cerr << "Failed to start packet capture!" << std::endl;
+        return 1;
+    }
+    std::cout << "Packet capture started successfully!" << std::endl;
+    
+    // Main consumer loop - parse and display packets
+    std::cout << "\n=== Packet Processing Pipeline Active ===" << std::endl;
+    std::cout << "Monitoring packets for 30 seconds..." << std::endl;
+    
+    int packet_count = 0;
+    auto start_time = std::chrono::steady_clock::now();
+    auto end_time = start_time + std::chrono::seconds(30);
+    
+    while (std::chrono::steady_clock::now() < end_time) {
+        std::vector<uint8_t> packet;
+        
+        // Wait for packet data to be available
+        handler.waitForData();
+        
+        // Read packet from buffer
+        if (handler.readPacket(packet)) {
+            packet_count++;
+            
+            // Parse the packet using our parser
+            ParsedPacket parsed = Parser::parse_packet(packet, 0);
+            
+            // Display basic packet information
+            std::cout << "\n--- Packet #" << packet_count << " ---" << std::endl;
+            std::cout << "Size: " << packet.size() << " bytes" << std::endl;
+            std::cout << "Summary: " << Parser::get_summary(parsed) << std::endl;
+            std::cout << "Flow: " << Parser::get_flow_id(parsed) << std::endl;
+            std::cout << "Protocol Stack: " << Parser::get_protocol_stack(parsed) << std::endl;
+            
+            // Show detailed info for first few packets
+            if (packet_count <= 3) {
+                std::cout << Parser::get_details(parsed) << std::endl;
+            }
+        }
+    }
+    
+    // Stop capture and cleanup
+    std::cout << "\n=== Stopping Packet Capture ===" << std::endl;
+    handler.stopCapture();
+    std::cout << "Processed " << packet_count << " packets in 30 seconds" << std::endl;
+    std::cout << "Pipeline test completed successfully!" << std::endl;
+    
     return 0;
 }
 
