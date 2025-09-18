@@ -62,8 +62,7 @@ int main() {
 
 
 void handleConsole() {
-    // Prompt the user for whether or not they want to capture packets, set a filter, or
-    // get stats.
+    // Prompt the user for whether or not they want to capture packets, set a filter, or get stats.
 
     while(true) {
         clearScreen();
@@ -166,7 +165,7 @@ void handlePacketCapture() {
         }
     }
     
-    // Stop capture and cleanup
+    // Stop capture and cleanup.
     std::cout << "Stopping Packet Capture" << std::endl;
     std::cout << "Captured " << packet_count << " packets in " << globals_.capture_time << " seconds" << std::endl;
     std::cout << "Packets saved to " << globals_.capture_file_name << std::endl;

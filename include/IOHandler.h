@@ -11,23 +11,19 @@
 
 #define IOHANDLER_DEFAULT_BUFFER_SIZE 1000
 #define IOHANDLER_POLL_TIMEOUT_MS 1000
-/**
- * IOHandler - Singleton class for raw packet capture.
- *
- * Reads raw bytes from socket, and stores in a shared buffer.
- */
+// IOHandler - Singleton class for raw packet capture.
 
 
 class IOHandler {
 public:
-    // Singleton access
+    // Singleton access.
     static IOHandler& getInstance();
     
-    // Delete copy constructor and assignment operator
+    // Delete copy constructor and assignment operator.
     IOHandler(const IOHandler&) = delete;
     IOHandler& operator=(const IOHandler&) = delete;
     
-    // Core functionality
+    // Core functionality.
     bool startCapture(const std::string& interface_name);
     void stopCapture();
     bool isCapturing() const;
@@ -43,7 +39,7 @@ public:
     size_t getBufferSize() const;
     
 private:
-    // Private constructor for singleton
+    // Private constructor for singleton.
     IOHandler();
     ~IOHandler();
     
@@ -57,7 +53,7 @@ private:
     int pollTPV3(int timeout_ms);
     int processTPV3Packets();
     
-    // Member variables
+    // Member variables.
     static std::unique_ptr<IOHandler> instance_;
     static std::mutex instance_mutex_;
     
@@ -74,16 +70,16 @@ private:
     std::string interface_name_;
     bool capturing_;
     
-    // TPACKET_V3 state
+    // TPACKET_V3 state.
     int tpv3_socket_;
     void* tpv3_ring_buffer_;
     void* tpv3_req_;  // Opaque pointer to tpacket_req3
     bool tpv3_open_;
     
-    // Capture thread management
+    // Capture thread management.
     std::thread capture_thread_;
     std::atomic<bool> should_stop_capture_;
     
-    // Friend class for unique_ptr access to destructor
+    // Friend class for unique_ptr access to destructor.
     friend class std::default_delete<IOHandler>;
 };

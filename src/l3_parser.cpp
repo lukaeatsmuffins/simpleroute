@@ -40,7 +40,7 @@ L3Info L3Parser::parse_ipv4(const std::vector<uint8_t>& packet_data, size_t star
     uint32_t dst_addr = *(uint32_t*)(data + 16);
     uint16_t frag_off = ntohs(*(uint16_t*)(data + 6));
     
-    // Fill IPv4 specific fields
+    // Fill IPv4 specific fields.
     result.ip_version = 4;
     result.src_ip = ipv4_to_string(src_addr);
     result.dst_ip = ipv4_to_string(dst_addr);
@@ -56,7 +56,7 @@ L3Info L3Parser::parse_ipv4(const std::vector<uint8_t>& packet_data, size_t star
     result.next_layer_offset = start_offset + result.header_length;
     result.has_options = (ihl > 5);
     
-    // Create string representation
+    // Create string representation.
     std::ostringstream oss;
     oss << "IPv4 " << result.src_ip << " -> " << result.dst_ip
         << " [" << result.protocol_name << "]";
@@ -90,7 +90,7 @@ L3Info L3Parser::parse_ipv6(const std::vector<uint8_t>& packet_data, size_t star
     const uint8_t* dst_addr = data + 24;
     uint32_t version_tc_fl = ntohl(*(uint32_t*)(data));
     
-    // Fill IPv6 specific fields
+    // Fill IPv6 specific fields.
     result.ip_version = 6;
     result.src_ip = ipv6_to_string(src_addr);
     result.dst_ip = ipv6_to_string(dst_addr);
@@ -104,7 +104,7 @@ L3Info L3Parser::parse_ipv6(const std::vector<uint8_t>& packet_data, size_t star
     result.has_options = false; // TODO: Check for extension headers
     result.is_fragmented = false; // TODO: Check fragment extension header
     
-    // Create string representation
+    // Create string representation.
     std::ostringstream oss;
     oss << "IPv6 " << result.src_ip << " -> " << result.dst_ip
         << " [" << result.protocol_name << "]";
@@ -132,7 +132,7 @@ std::string L3Parser::serialize(const L3Info& l3_info) {
             oss << static_cast<int>(l3_info.next_protocol) << ";" << static_cast<int>(l3_info.hop_limit) << ";" << l3_info.payload_length;
             break;
         default:
-            // Unknown IP version
+            // Unknown IP version.
             break;
     }
     
@@ -145,7 +145,7 @@ L3Info L3Parser::deserialize(const std::string& layer_string) {
     std::vector<std::string> fields;
     std::string current_field;
     
-    // Split by ; to get fields
+    // Split by ; to get fields.
     for (char c : layer_string) {
         if (c == ';') {
             fields.push_back(current_field);

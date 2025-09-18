@@ -14,7 +14,7 @@ L2Info L2Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_off
 
     const uint8_t* data = packet_data.data() + start_offset;
     
-    // Extract MAC addresses
+    // Extract MAC addresses.
     uint8_t dst_mac[6], src_mac[6];
     memcpy(dst_mac, data, 6);
     memcpy(src_mac, data + 6, 6);
@@ -22,12 +22,12 @@ L2Info L2Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_off
     result.src_mac = mac_to_string(src_mac);
     result.dst_mac = mac_to_string(dst_mac);
     
-    // Extract EtherType
+    // Extract EtherType.
     uint16_t ether_type = ntohs(*(uint16_t*)(data + 12));
     result.ether_type = ether_type;
     result.protocol_name = get_protocol_name(ether_type);
     
-    // Handle VLAN tag if present
+    // Handle VLAN tag if present.
     if (ether_type == 0x8100 && packet_data.size() >= start_offset + 18) {
         result.has_vlan = true;
         uint16_t vlan_tci = ntohs(*(uint16_t*)(data + 14));
@@ -39,7 +39,7 @@ L2Info L2Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_off
         result.header_length = 18;
         result.next_layer_offset = start_offset + 18;
         
-        // Update protocol name to inner type
+        // Update protocol name to inner type.
         result.protocol_name = get_protocol_name(inner_type);
     } else {
         result.has_vlan = false;
@@ -50,7 +50,7 @@ L2Info L2Parser::parse(const std::vector<uint8_t>& packet_data, size_t start_off
         result.next_layer_offset = start_offset + 14;
     }
     
-    // Create string representation
+    // Create string representation.
     std::ostringstream oss;
     oss << "ETH " << result.src_mac << " -> " << result.dst_mac 
         << " [" << result.protocol_name << "]";
@@ -88,7 +88,7 @@ L2Info L2Parser::deserialize(const std::string& layer_string) {
     std::vector<std::string> fields;
     std::string current_field;
     
-    // Split by ; to get fields
+    // Split by ; to get fields.
     for (char c : layer_string) {
         if (c == ';') {
             fields.push_back(current_field);

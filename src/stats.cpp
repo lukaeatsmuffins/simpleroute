@@ -6,11 +6,11 @@
 #include <iostream>
 
 Stats::Stats() {
-    // Initialize with empty filter
+    // Initialize with empty filter.
 }
 
 Stats::~Stats() {
-    // Nothing to clean up
+    // Nothing to clean up.
 }
 
 bool Stats::setFilter(const std::string& filter_string) {
@@ -35,7 +35,7 @@ bool Stats::parseFilterString(const std::string& filter_string) {
         std::string key = token.substr(0, eq_pos);
         std::string value = token.substr(eq_pos + 1);
         
-        // Convert key to lowercase for case-insensitive matching
+        // Convert key to lowercase for case-insensitive matching.
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         
         if (key == "protocol") {
@@ -69,7 +69,7 @@ bool Stats::matchesFilter(const ParsedPacket& packet) const {
         return true; // No filter means match all
     }
     
-    // Check MAC filters
+    // Check MAC filters.
     if (filter_.has_mac_filter()) {
         if (!filter_.src_mac.empty() && !macMatches(packet.src_mac(), filter_.src_mac)) {
             return false;
@@ -79,21 +79,21 @@ bool Stats::matchesFilter(const ParsedPacket& packet) const {
         }
     }
     
-    // Check VLAN filter
+    // Check VLAN filter.
     if (filter_.has_vlan_filter()) {
         if (!packet.has_l2() || packet.l2.vlan_id != filter_.vlan_id) {
             return false;
         }
     }
     
-    // Check protocol filter
+    // Check protocol filter.
     if (filter_.has_protocol()) {
         if (!Parser::is_protocol(packet, filter_.protocol)) {
             return false;
         }
     }
     
-    // Check IP filters
+    // Check IP filters.
     if (filter_.has_ip_filter()) {
         if (!packet.has_l3()) return false;
         
@@ -105,7 +105,7 @@ bool Stats::matchesFilter(const ParsedPacket& packet) const {
         }
     }
     
-    // Check port filters
+    // Check port filters.
     if (filter_.has_port_filter()) {
         if (!packet.has_l4()) return false;
         
@@ -117,7 +117,7 @@ bool Stats::matchesFilter(const ParsedPacket& packet) const {
         }
     }
     
-    // Check size filters
+    // Check size filters.
     if (filter_.has_size_filter()) {
         if (filter_.min_size > 0 && packet.total_length < filter_.min_size) {
             return false;
@@ -191,12 +191,12 @@ bool Stats::hasActiveFilter() const {
 }
 
 bool Stats::macMatches(const std::string& packet_mac, const std::string& filter_mac) const {
-    // Simple exact match for now
+    // Simple exact match for now.
     return packet_mac == filter_mac;
 }
 
 bool Stats::ipMatches(const std::string& packet_ip, const std::string& filter_ip) const {
-    // Simple exact match for now (CIDR support can be added later)
+    // Simple exact match for now. (CIDR support can be added later).
     return packet_ip == filter_ip;
 }
 
@@ -244,7 +244,7 @@ std::string Stats::formatGroupingResults(
 ) const {
     std::ostringstream oss;
     
-    // Get group name for header
+    // Get group name for header.
     std::string group_name;
     switch (group_by) {
         case GroupBy::SRC_MAC: group_name = "Source MAC"; break;
@@ -261,7 +261,7 @@ std::string Stats::formatGroupingResults(
     
     oss << "\n=== Grouping by " << group_name << " ===" << std::endl;
     
-    // Sort by count (descending)
+    // Sort by count (descending).
     std::vector<std::pair<std::string, uint64_t>> sorted_groups(groups.begin(), groups.end());
     std::sort(sorted_groups.begin(), sorted_groups.end(), 
               [](const auto& a, const auto& b) { return a.second > b.second; });

@@ -6,46 +6,36 @@
 #include <vector>
 #include <memory>
 
-/**
- * Packet Statistics Collection Class
- * 
- * Provides two main modes:
- * 1. Filter Mode: Apply filter and show stats for matching packets
- * 2. Grouping Mode: Group packets by criteria and show counts per group
- */
+// Packet Statistics Collection Class - Provides two main modes: Filter Mode and Grouping Mode.
 
-/**
- * Simple statistics for filtered packets
- */
+// Simple statistics for filtered packets.
 struct FilterStats {
     uint64_t packet_count = 0;
     uint64_t total_bytes = 0;
     std::string filter_description;
 };
 
-/**
- * Filter criteria for packet filtering
- */
+// Filter criteria for packet filtering.
 struct FilterCriteria {
-    // L2 (Ethernet) filtering
+    // L2 (Ethernet) filtering.
     std::string src_mac;            // Source MAC address
     std::string dst_mac;            // Destination MAC address
     uint16_t vlan_id = 0;           // VLAN ID (0 = any)
     
-    // L3 (IP) filtering
+    // L3 (IP) filtering.
     std::string protocol;           // e.g., "tcp", "udp", "icmp"
     std::string src_ip;             // Source IP address
     std::string dst_ip;             // Destination IP address
     
-    // L4 (Transport) filtering
+    // L4 (Transport) filtering.
     uint16_t src_port = 0;          // Source port (0 = any)
     uint16_t dst_port = 0;          // Destination port (0 = any)
     
-    // General filtering
+    // General filtering.
     uint32_t min_size = 0;         // Minimum packet size
     uint32_t max_size = 0;          // Maximum packet size
     
-    // Helper methods
+    // Helper methods.
     bool has_mac_filter() const { return !src_mac.empty() || !dst_mac.empty(); }
     bool has_vlan_filter() const { return vlan_id != 0; }
     bool has_protocol() const { return !protocol.empty(); }
@@ -58,152 +48,86 @@ struct FilterCriteria {
     }
 };
 
-/**
- * Grouping criteria for packet grouping
- */
+// Grouping criteria for packet grouping.
 enum class GroupBy {
-    // L2 (Ethernet) grouping
+    // L2 (Ethernet) grouping.
     SRC_MAC,        // Group by source MAC address
     DST_MAC,        // Group by destination MAC address
     VLAN_ID,        // Group by VLAN ID
     
-    // L3 (IP) grouping
+    // L3 (IP) grouping.
     PROTOCOL,       // Group by protocol (TCP, UDP, ICMP, etc.)
     SRC_IP,         // Group by source IP
     DST_IP,         // Group by destination IP
     
-    // L4 (Transport) grouping
+    // L4 (Transport) grouping.
     SRC_PORT,       // Group by source port
     DST_PORT,       // Group by destination port
     
-    // General grouping
+    // General grouping.
     PACKET_SIZE     // Group by packet size ranges
 };
 
-/**
- * Main statistics collection class
- */
+// Main statistics collection class.
 class Stats {
 public:
-    /**
-     * Constructor
-     */
+    // Constructor.
     Stats();
     
-    /**
-     * Destructor
-     */
+    // Destructor.
     ~Stats();
     
-    // ===== FILTER MODE =====
+    // ===== FILTER MODE =====.
     
-    /**
-     * Set filter criteria from a filter string
-     * @param filter_string Filter string in format: "protocol=TCP src_ip=192.168.1.0/24 dst_port=80"
-     * @return true if filter was parsed successfully, false otherwise
-     */
+    // Set filter criteria from a filter string.
     bool setFilter(const std::string& filter_string);
     
-    /**
-     * Clear all filter criteria
-     */
+    // Clear all filter criteria.
     void clearFilter();
     
-    /**
-     * Check if a packet matches the current filter criteria
-     * @param packet The parsed packet to check
-     * @return true if packet matches filter, false otherwise
-     */
+    // Check if a packet matches the current filter criteria.
     bool matchesFilter(const ParsedPacket& packet) const;
     
-    /**
-    * Apply filter to packets from a capture file and return statistics
-    * @param filename Path to .capt file
-    * @return FilterStats containing count and bytes of matching packets
-    */
+    // Apply filter to packets from a capture file and return statistics.
     FilterStats applyFilter(const std::string& filename) const;
     
-    /**
-    * Group packets from a capture file by specified criteria
-    * @param filename Path to .capt file
-    * @param group_by Criteria to group by
-    * @return Map of group key to packet count
-    */
+    // Group packets from a capture file by specified criteria.
     std::unordered_map<std::string, uint64_t> groupPackets(
         const std::string& filename, 
         GroupBy group_by
     ) const;
     
-    /**
-    * Get formatted grouping results from capture file
-    * @param filename Path to .capt file
-    * @param group_by Criteria to group by
-    * @return Formatted string showing groups and counts
-    */
+    // Get formatted grouping results from capture file.
     std::string getGroupingReport(
         const std::string& filename, 
         GroupBy group_by
     ) const;
     
-    /**
-     * Get current filter criteria
-     * @return Reference to current FilterCriteria
-     */
+    // Get current filter criteria.
     const FilterCriteria& getFilter() const { return filter_; }
     
-    /**
-     * Check if any filter is currently active
-     * @return true if any filter criteria is set
-     */
+    // Check if any filter is currently active.
     bool hasActiveFilter() const;
 
 private:
     FilterCriteria filter_;
     
-    /**
-     * Parse filter string and populate FilterCriteria
-     * @param filter_string The filter string to parse
-     * @return true if parsing was successful
-     */
+    // Parse filter string and populate FilterCriteria.
     bool parseFilterString(const std::string& filter_string);
     
-    /**
-     * Check if MAC address matches filter
-     * @param packet_mac The MAC address from the packet
-     * @param filter_mac The MAC address from the filter
-     * @return true if MAC matches filter
-     */
+    // Check if MAC address matches filter.
     bool macMatches(const std::string& packet_mac, const std::string& filter_mac) const;
     
-    /**
-     * Check if IP address matches filter (supports CIDR notation)
-     * @param packet_ip The IP address from the packet
-     * @param filter_ip The IP address/subnet from the filter
-     * @return true if IP matches filter
-     */
+    // Check if IP address matches filter (supports CIDR notation).
     bool ipMatches(const std::string& packet_ip, const std::string& filter_ip) const;
     
-    /**
-     * Get grouping key for a packet based on GroupBy criteria
-     * @param packet The parsed packet
-     * @param group_by The grouping criteria
-     * @return String key for grouping
-     */
+    // Get grouping key for a packet based on GroupBy criteria.
     std::string getGroupingKey(const ParsedPacket& packet, GroupBy group_by) const;
     
-    /**
-    * Get packet size range string for PACKET_SIZE grouping
-    * @param packet_size The packet size
-    * @return Size range string (e.g., "64-128", "1024+")
-    */
+    // Get packet size range string for PACKET_SIZE grouping.
     std::string getSizeRange(uint32_t packet_size) const;
     
-    /**
-    * Format grouping results into a readable string
-    * @param groups Map of group keys to counts
-    * @param group_by The grouping criteria used
-    * @return Formatted string showing groups and counts
-    */
+    // Format grouping results into a readable string.
     std::string formatGroupingResults(
         const std::unordered_map<std::string, uint64_t>& groups, 
         GroupBy group_by

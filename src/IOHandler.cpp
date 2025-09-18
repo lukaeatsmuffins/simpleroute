@@ -162,7 +162,7 @@ void IOHandler::writePacket(const std::vector<uint8_t>& packet) {
 }
 
 void IOHandler::packetCaptureLoop() {
-    // Open TPACKET_V3 for this interface
+    // Open TPACKET_V3 for this interface.
     if (!openTPV3(interface_name_)) {
         std::cerr << "Failed to open TPACKET_V3 on interface: " << interface_name_ << std::endl;
         return;
@@ -178,7 +178,7 @@ void IOHandler::packetCaptureLoop() {
             // Process available packets.
             processTPV3Packets();
         }
-        // If poll_result == 0, timeout occurred, continue
+        // If poll_result == 0, timeout occurred, continue.
     }
     
     closeTPV3();
@@ -333,16 +333,16 @@ int IOHandler::processTPV3Packets() {
                 break;
             }
 
-            // Extract frame data
+            // Extract frame data.
             uint8_t* frame_data = (uint8_t*)frame_hdr + frame_hdr->tp_mac;
             uint32_t frame_len = frame_hdr->tp_len;
 
-            // Convert to vector and write to shared buffer
+            // Convert to vector and write to shared buffer.
             std::vector<uint8_t> packet(frame_data, frame_data + frame_len);
             writePacket(packet);
             packets_processed++;
 
-            // Move to next frame
+            // Move to next frame.
             offset += frame_hdr->tp_next_offset;
             
             if (pkt == num_packets - 1) {

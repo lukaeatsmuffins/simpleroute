@@ -45,7 +45,7 @@ L4Info L4Parser::parse_tcp(const std::vector<uint8_t>& packet_data, size_t start
     result.has_tcp_options = (data_off > 5);
     result.next_layer_offset = start_offset + result.header_length;
     
-    // Create string representation
+    // Create string representation.
     std::ostringstream oss;
     oss << "TCP " << result.src_service << " -> " << result.dst_service
         << " [" << result.tcp_flags_string << "] seq:" << result.sequence_number;
@@ -80,7 +80,7 @@ L4Info L4Parser::parse_udp(const std::vector<uint8_t>& packet_data, size_t start
     result.header_length = 8;
     result.next_layer_offset = start_offset + 8;
     
-    // Create string representation
+    // Create string representation.
     std::ostringstream oss;
     oss << "UDP " << result.src_service << " -> " << result.dst_service
         << " len:" << result.udp_length;
@@ -110,7 +110,7 @@ L4Info L4Parser::parse_icmp(const std::vector<uint8_t>& packet_data, size_t star
     result.header_length = 8;
     result.next_layer_offset = start_offset + 8;
     
-    // Create string representation
+    // Create string representation.
     std::ostringstream oss;
     oss << "ICMP type:" << static_cast<unsigned>(result.icmp_type) 
         << " code:" << static_cast<unsigned>(result.icmp_code);
@@ -160,7 +160,7 @@ std::string L4Parser::serialize(const L4Info& l4_info) {
     std::ostringstream oss;
     oss << l4_info.protocol_name << ";" << l4_info.src_port << ";" << l4_info.dst_port;
     
-    // Add protocol-specific data
+    // Add protocol-specific data.
     switch (static_cast<Protocol>(l4_info.protocol_type)) {
         case Protocol::PROTO_TCP:
             oss << ";" << l4_info.tcp_flags_string << ";" << l4_info.window_size;
@@ -175,7 +175,7 @@ std::string L4Parser::serialize(const L4Info& l4_info) {
             oss << ";" << static_cast<int>(l4_info.icmp_type) << ";" << static_cast<int>(l4_info.icmp_code);
             break;
         default:
-            // No additional data for other protocols
+            // No additional data for other protocols.
             break;
     }
     
@@ -188,7 +188,7 @@ L4Info L4Parser::deserialize(const std::string& layer_string) {
     std::vector<std::string> fields;
     std::string current_field;
     
-    // Split by ; to get fields
+    // Split by ; to get fields.
     for (char c : layer_string) {
         if (c == ';') {
             fields.push_back(current_field);
@@ -210,7 +210,7 @@ L4Info L4Parser::deserialize(const std::string& layer_string) {
         result.src_port = std::stoi(fields[1]);
         result.dst_port = std::stoi(fields[2]);
         
-        // Add protocol-specific data using enum-based switch
+        // Add protocol-specific data using enum-based switch.
         switch (static_cast<Protocol>(result.protocol_type)) {
             case PROTO_TCP:
                 if (fields.size() >= 5) {
@@ -231,7 +231,7 @@ L4Info L4Parser::deserialize(const std::string& layer_string) {
                 }
                 break;
             default:
-                // No additional data for other protocols
+                // No additional data for other protocols.
                 break;
         }
     }
@@ -259,6 +259,6 @@ L4Parser::Protocol L4Parser::get_protocol_type(const std::string& protocol_name)
     if (protocol_name == "OSPF") return PROTO_OSPF;
     if (protocol_name == "SCTP") return PROTO_SCTP;
     
-    // Default to ICMP for unknown protocols
+    // Default to ICMP for unknown protocols.
     return PROTO_ICMP;
 }

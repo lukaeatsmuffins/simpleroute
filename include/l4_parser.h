@@ -4,24 +4,22 @@
 #include <vector>
 #include <stdint.h>
 
-/**
- * Layer 4 (Transport) information structure
- */
+// Layer 4 (Transport) information structure.
 struct L4Info {
-    // Parsing success
+    // Parsing success.
     bool parsed;                    // Whether parsing was successful
     
-    // Protocol information
+    // Protocol information.
     uint8_t protocol_type;          // Protocol type (6=TCP, 17=UDP, etc.)
     std::string protocol_name;      // Protocol name (TCP, UDP, ICMP, etc.)
     
-    // Port information (TCP/UDP only)
+    // Port information (TCP/UDP only).
     uint16_t src_port;              // Source port (0 if not applicable)
     uint16_t dst_port;              // Destination port (0 if not applicable)
     std::string src_service;        // Source service name
     std::string dst_service;        // Destination service name
     
-    // TCP specific
+    // TCP specific.
     uint32_t sequence_number;       // TCP sequence number
     uint32_t ack_number;            // TCP acknowledgment number
     uint8_t tcp_flags;              // TCP flags byte
@@ -29,33 +27,27 @@ struct L4Info {
     uint16_t window_size;           // TCP window size
     bool has_tcp_options;           // TCP options present
     
-    // UDP specific
+    // UDP specific.
     uint16_t udp_length;            // UDP length field
     
-    // ICMP specific
+    // ICMP specific.
     uint8_t icmp_type;              // ICMP type
     uint8_t icmp_code;              // ICMP code
     std::string icmp_type_name;     // ICMP type name
     std::string icmp_code_name;     // ICMP code name
     
-    // Header information
+    // Header information.
     uint32_t header_length;         // L4 header length in bytes
     uint32_t next_layer_offset;     // Offset to payload
     
-    // String representation
+    // String representation.
     std::string info_string;        // Formatted string representation
 };
 
-/**
- * Layer 4 (Transport) Parser
- * 
- * Stateless parser for TCP, UDP, and ICMP headers
- */
+// Layer 4 (Transport) Parser - Stateless parser for TCP, UDP, and ICMP headers.
 class L4Parser {
 public:
-    /**
-     * Protocol enumeration for L4 protocols
-     */
+    // Protocol enumeration for L4 protocols.
     enum Protocol : uint8_t {
         PROTO_ICMP = 1,
         PROTO_TCP = 6,
@@ -65,79 +57,34 @@ public:
         PROTO_SCTP = 132
     };
     
-    /**
-     * Parse transport layer protocol and return detailed information
-     * @param packet_data Vector containing the packet data
-     * @param start_offset Offset in the vector where L4 header starts
-     * @param protocol IP protocol number (6=TCP, 17=UDP, 1=ICMP, etc.)
-     * @return L4Info structure with all extracted information
-     */
+    // Parse transport layer protocol and return detailed information.
     static L4Info parse(const std::vector<uint8_t>& packet_data, size_t start_offset, uint8_t protocol);
     
-    /**
-     * Serialize L4 information to capture format
-     * @param l4_info The L4 information to serialize
-     * @return Serialized string in format "Protocol;src_port;dst_port;protocol_specific_data"
-     */
+    // Serialize L4 information to capture format.
     static std::string serialize(const L4Info& l4_info);
 
-    /**
-     * Deserialize L4 information from capture format
-     * @param layer_string The serialized L4 layer string
-     * @return L4Info structure with deserialized information
-     */
+    // Deserialize L4 information from capture format.
     static L4Info deserialize(const std::string& layer_string);
 
 private:
-    /**
-     * Parse TCP header
-     * @param packet_data Vector containing the packet data
-     * @param start_offset Offset where TCP header starts
-     * @return L4Info structure with TCP information
-     */
+    // Parse TCP header.
     static L4Info parse_tcp(const std::vector<uint8_t>& packet_data, size_t start_offset);
 
-    /**
-     * Parse UDP header
-     * @param packet_data Vector containing the packet data
-     * @param start_offset Offset where UDP header starts
-     * @return L4Info structure with UDP information
-     */
+    // Parse UDP header.
     static L4Info parse_udp(const std::vector<uint8_t>& packet_data, size_t start_offset);
 
-    /**
-     * Parse ICMP header
-     * @param packet_data Vector containing the packet data
-     * @param start_offset Offset where ICMP header starts
-     * @return L4Info structure with ICMP information
-     */
+    // Parse ICMP header.
     static L4Info parse_icmp(const std::vector<uint8_t>& packet_data, size_t start_offset);
 
-    /**
-     * Get TCP flags as string
-     * @param flags TCP flags byte
-     * @return String representation of TCP flags
-     */
+    // Get TCP flags as string.
     static std::string tcp_flags_to_string(uint8_t flags);
 
-    /**
-     * Get service name for port number
-     * @param port Port number
-     * @return Well-known service name or port number as string
-     */
+    // Get service name for port number.
     static std::string get_service_name(uint16_t port);
 
-    /**
-     * Get protocol name from protocol number
-     * @param protocol IP protocol number
-     * @return Protocol name string
-     */
+    // Get protocol name from protocol number.
     static std::string get_protocol_name(uint8_t protocol);
 
-    /**
-     * Get protocol type enum from protocol name
-     * @param protocol_name Protocol name string (TCP, UDP, ICMP, etc.)
-     * @return Protocol enum value
-     */
+    // Get protocol type enum from protocol name.
     static Protocol get_protocol_type(const std::string& protocol_name);
 };
