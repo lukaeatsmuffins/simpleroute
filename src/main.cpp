@@ -66,12 +66,12 @@ void handleConsole() {
 
     while(true) {
         clearScreen();
-        std::cout << "Select an option:" << std::endl;
-        std::cout << "1. Capture packets" << std::endl;
-        std::cout << "2. Set capture options" << std::endl;
-        std::cout << "3. Set a filter" << std::endl;
-        std::cout << "4. Get stats" << std::endl;
-        std::cout << "5. Exit" << std::endl;
+        std::cout << "Select an option:" << std::endl
+                  << "1. Capture packets" << std::endl
+                  << "2. Set capture options" << std::endl
+                  << "3. Set a filter" << std::endl
+                  << "4. Get stats" << std::endl
+                  << "5. Exit" << std::endl;
 
         int choice;
         std::cin >> choice;
@@ -129,7 +129,11 @@ void handlePacketCapture() {
     bool capture_started = handler.startCapture(globals_.capture_interface);
 
     // Start packet capture.
-    std::cout << "Starting packet capture on " << globals_.capture_interface << "..." << std::endl;
+    std::cout << "Starting packet capture on " 
+              << globals_.capture_interface 
+              << "..." 
+              << std::endl;
+              
     if (!capture_started) {
         std::cerr << "ERROR: Failed to start packet capture" << std::endl;
         return;
@@ -144,7 +148,10 @@ void handlePacketCapture() {
         return;
     }
     
-    std::cout << "Capturing packets for " << globals_.capture_time << " seconds..." << std::endl;
+    std::cout << "Capturing packets for " 
+              << globals_.capture_time 
+              << " seconds..." 
+              << std::endl;
     
     int packet_count = 0;
     auto start_time = std::chrono::steady_clock::now();
@@ -167,8 +174,15 @@ void handlePacketCapture() {
     
     // Stop capture and cleanup.
     std::cout << "Stopping Packet Capture" << std::endl;
-    std::cout << "Captured " << packet_count << " packets in " << globals_.capture_time << " seconds" << std::endl;
-    std::cout << "Packets saved to " << globals_.capture_file_name << std::endl;
+    std::cout << "Captured " 
+              << packet_count 
+              << " packets in " 
+              << globals_.capture_time 
+              << " seconds" 
+              << std::endl;
+    std::cout << "Packets saved to " 
+              << globals_.capture_file_name 
+              << std::endl;
     
     handler.stopCapture();
     capture_file.close();
@@ -177,12 +191,12 @@ void handlePacketCapture() {
 void handleSetCaptureOptions() {
     while(true) {
         clearScreen();
-        std::cout << "Set capture options:" << std::endl;
-        std::cout << "1. Set capture interface" << std::endl;
-        std::cout << "2. Set capture buffer size" << std::endl;
-        std::cout << "3. Set capture time" << std::endl;
-        std::cout << "4. Set capture file name" << std::endl;
-        std::cout << "5. Exit" << std::endl;
+        std::cout << "Set capture options:" << std::endl
+                  << "1. Set capture interface" << std::endl
+                  << "2. Set capture buffer size" << std::endl
+                  << "3. Set capture time" << std::endl
+                  << "4. Set capture file name" << std::endl
+                  << "5. Exit" << std::endl;
 
         int choice;
         std::cin >> choice;
@@ -211,8 +225,8 @@ void handleSetCaptureOptions() {
 }
 
 void handleSetBufferSize() {
-    std::cout << "Set buffer size:" << std::endl;
-    std::cout << "Enter buffer size: ";
+    std::cout << "Set buffer size:" << std::endl
+              << "Enter buffer size: ";
     int buffer_size;
     std::cin >> buffer_size;
 
@@ -282,5 +296,10 @@ void handleSetFilter() {
 void handleGetStats() {
 
     FilterStats stats = globals_.stats_.applyFilter(globals_.capture_file_name);
-    std::cout << "Stats: " << stats.packet_count << " packets, " << stats.total_bytes << " bytes" << std::endl;
+    std::cout << "Stats: " 
+              << stats.packet_count 
+              << " packets, " 
+              << stats.total_bytes 
+              << " bytes" 
+              << std::endl;
 }
