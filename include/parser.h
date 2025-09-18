@@ -32,13 +32,9 @@ struct ParsedPacket {
 class Parser {
 public:
     static ParsedPacket parse_packet(const std::vector<uint8_t>& packet_data, size_t start_offset = 0);
-    static std::string get_summary(const ParsedPacket& parsed);
-    static std::string get_details(const ParsedPacket& parsed);
-    static std::string get_flow_id(const ParsedPacket& parsed);
     static bool is_protocol(const ParsedPacket& parsed, const std::string& protocol);
     static uint32_t get_header_overhead(const ParsedPacket& parsed);
     static bool has_payload(const ParsedPacket& parsed);
-    static std::string get_protocol_stack(const ParsedPacket& parsed);
     static std::string serialize_packet(const ParsedPacket& parsed);
     static ParsedPacket deserialize_packet(const std::string& line);
     

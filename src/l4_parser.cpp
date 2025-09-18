@@ -216,7 +216,6 @@ L4Info L4Parser::deserialize(const std::string& layer_string) {
                 if (fields.size() >= 5) {
                     result.tcp_flags_string = fields[3];
                     result.window_size = std::stoi(fields[4]);
-                    // New format includes sequence/ack numbers
                     if (fields.size() >= 7) {
                         result.sequence_number = std::stoul(fields[5]);
                         result.ack_number = std::stoul(fields[6]);
