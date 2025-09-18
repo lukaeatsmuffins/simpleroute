@@ -57,8 +57,6 @@ bool IOHandler::startCapture(const std::string& interface_name) {
     buffer_tail_ = 0;
     buffer_count_ = 0;
     
-    // TODO: Initialize AF_PACKET socket here.
-    
     // Start capture thread.
     capture_thread_ = std::thread(&IOHandler::packetCaptureLoop, this);
     capturing_ = true;

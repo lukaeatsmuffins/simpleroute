@@ -49,6 +49,7 @@ class L4Parser {
 public:
     // Protocol enumeration for L4 protocols.
     enum Protocol : uint8_t {
+        PROTO_UNKNOWN = 0,
         PROTO_ICMP = 1,
         PROTO_TCP = 6,
         PROTO_UDP = 17,

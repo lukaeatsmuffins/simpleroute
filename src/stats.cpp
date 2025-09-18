@@ -5,13 +5,9 @@
 #include <algorithm>
 #include <iostream>
 
-Stats::Stats() {
-    // Initialize with empty filter.
-}
+Stats::Stats() {}
 
-Stats::~Stats() {
-    // Nothing to clean up.
-}
+Stats::~Stats() {}
 
 bool Stats::setFilter(const std::string& filter_string) {
     clearFilter();
@@ -39,7 +35,6 @@ bool Stats::parseFilterString(const std::string& filter_string) {
         std::string key = token.substr(0, eq_pos);
         std::string value = token.substr(eq_pos + 1);
         
-        // Convert key to lowercase for case-insensitive matching.
         std::transform(key.begin(), key.end(), key.begin(), ::tolower);
         
         if (key == "protocol") {
@@ -70,7 +65,7 @@ bool Stats::parseFilterString(const std::string& filter_string) {
 
 bool Stats::matchesFilter(const ParsedPacket& packet) const {
     if (!filter_.has_any_filter()) {
-        return true; // No filter means match all
+        return true;
     }
     
     // Check MAC filters.
@@ -195,12 +190,10 @@ bool Stats::hasActiveFilter() const {
 }
 
 bool Stats::macMatches(const std::string& packet_mac, const std::string& filter_mac) const {
-    // Simple exact match for now.
     return packet_mac == filter_mac;
 }
 
 bool Stats::ipMatches(const std::string& packet_ip, const std::string& filter_ip) const {
-    // Simple exact match for now. (CIDR support can be added later).
     return packet_ip == filter_ip;
 }
 
@@ -248,7 +241,6 @@ std::string Stats::formatGroupingResults(
 ) const {
     std::ostringstream oss;
     
-    // Get group name for header.
     std::string group_name;
     switch (group_by) {
         case GroupBy::SRC_MAC: group_name = "Source MAC"; break;
@@ -265,7 +257,6 @@ std::string Stats::formatGroupingResults(
     
     oss << "\n=== Grouping by " << group_name << " ===" << std::endl;
     
-    // Sort by count (descending).
     std::vector<std::pair<std::string, uint64_t>> sorted_groups(groups.begin(), groups.end());
     std::sort(sorted_groups.begin(), sorted_groups.end(), 
               [](const auto& a, const auto& b) { return a.second > b.second; });

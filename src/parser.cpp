@@ -20,7 +20,6 @@ ParsedPacket Parser::parse_packet(const std::vector<uint8_t>& packet_data, size_
         result.l4 = L4Parser::parse(packet_data, result.l3.next_layer_offset, result.l3.next_protocol);
     }
 
-    // Calculate payload information.
     calculate_payload_info(packet_data, start_offset, result);
     
     return result;
@@ -123,15 +122,12 @@ std::string Parser::get_flow_id(const ParsedPacket& parsed) {
     std::ostringstream oss;
     
     if (parsed.has_l3() && parsed.has_l4()) {
-        // Use IP addresses and ports for flow identification.
         oss << parsed.src_ip() << ":" << parsed.src_port();
         oss << " <-> ";
         oss << parsed.dst_ip() << ":" << parsed.dst_port();
     } else if (parsed.has_l3()) {
-        // Use only IP addresses if no L4.
         oss << parsed.src_ip() << " <-> " << parsed.dst_ip();
     } else if (parsed.has_l2()) {
-        // Use MAC addresses if no L3.
         oss << parsed.src_mac() << " <-> " << parsed.dst_mac();
     } else {
         oss << "Unknown flow";

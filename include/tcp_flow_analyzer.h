@@ -1,4 +1,5 @@
-#pragma once
+#ifndef TCP_FLOW_ANALYZER_H
+#define TCP_FLOW_ANALYZER_H
 
 #include "parser.h"
 #include <string>
@@ -7,44 +8,41 @@
 #include <set>
 #include <stdint.h>
 
-// TCP Flow Analysis - Dedicated class for analyzing TCP connections and flows
 
-// TCP Flow information structure
+/*
+* TCP flow analyzer is a static class that is used to analyze TCP flows in a capture file.
+* Provides methods to analyze the flows and generate a report.
+*/
+
 struct TCPFlow {
-    std::string flow_id;               // "src_ip:src_port->dst_ip:dst_port"
-    std::string src_ip;               // Source IP address
-    std::string dst_ip;               // Destination IP address
-    uint16_t src_port;                // Source port
-    uint16_t dst_port;                // Destination port
+    std::string flow_id;
+    std::string src_ip;
+    std::string dst_ip;
+    uint16_t src_port;
+    uint16_t dst_port;
     
-    // Packet counts
-    uint32_t packets_sent;            // Packets from src to dst
-    uint32_t packets_received;        // Packets from dst to src
-    uint32_t bytes_sent;              // Bytes from src to dst
-    uint32_t bytes_received;          // Bytes from dst to src
+    uint32_t packets_sent;
+    uint32_t packets_received;
+    uint32_t bytes_sent;
+    uint32_t bytes_received;
     
-    // TCP-specific metrics
-    uint32_t syn_packets;             // SYN packets
-    uint32_t syn_ack_packets;         // SYN-ACK packets
-    uint32_t ack_packets;             // ACK packets
-    uint32_t fin_packets;             // FIN packets
-    uint32_t rst_packets;             // RST packets
-    uint32_t retransmissions;         // Detected retransmissions
+    uint32_t syn_packets;
+    uint32_t syn_ack_packets;
+    uint32_t ack_packets;
+    uint32_t fin_packets;
+    uint32_t rst_packets;
+    uint32_t retransmissions;
     
-    // Connection state tracking
-    bool connection_established;      // SYN-ACK received
-    bool connection_closed;           // FIN or RST received
-    uint32_t max_window_size;        // Maximum window size observed
-    uint32_t min_window_size;         // Minimum window size observed
+    bool connection_established;
+    bool connection_closed;
+    uint32_t max_window_size;
+    uint32_t min_window_size;
     
-    // Timing information (if available)
-    uint64_t first_packet_time;       // Timestamp of first packet
-    uint64_t last_packet_time;        // Timestamp of last packet
+    uint64_t first_packet_time;
+    uint64_t last_packet_time;
     
-    // Retransmission detection
-    std::set<uint32_t> seen_sequence_numbers;  // Track seen sequence numbers
+    std::set<uint32_t> seen_sequence_numbers;
     
-    // Constructor
     TCPFlow() : src_port(0), dst_port(0), packets_sent(0), packets_received(0),
                 bytes_sent(0), bytes_received(0), syn_packets(0), syn_ack_packets(0),
                 ack_packets(0), fin_packets(0), rst_packets(0), retransmissions(0),
@@ -52,10 +50,9 @@ struct TCPFlow {
                 max_window_size(0), min_window_size(0), first_packet_time(0), last_packet_time(0) {}
 };
 
-// TCP Flow Analysis Results
 struct TCPFlowAnalysis {
-    std::unordered_map<std::string, TCPFlow> flows;  // Fast flow lookup by ID
-    std::vector<std::string> flow_ids;               // Ordered flow IDs for indexing
+    std::unordered_map<std::string, TCPFlow> flows;
+    std::vector<std::string> flow_ids;
     uint32_t total_flows;
     uint32_t established_flows;
     uint32_t closed_flows;
@@ -66,32 +63,24 @@ struct TCPFlowAnalysis {
                        total_tcp_packets(0), total_retransmissions(0) {}
 };
 
-// Main TCP Flow Analyzer class
 class TCPFlowAnalyzer {
 public:
-    // Analyze TCP flows from a capture file
+    // Reads a capture file and returns an object containing all of the flows and related information.
     static TCPFlowAnalysis analyzeFlows(const std::string& filename);
-    
-    // Generate a formatted report of TCP flows
+    // Generates a string of information relating to all of the flows in a file.
     static std::string generateFlowReport(const TCPFlowAnalysis& analysis);
-    
-    // Flow navigation methods
+    // Used to iterate through the flows analyzed in a capture file.
     static std::pair<std::string, TCPFlow> getCurrentFlow(const TCPFlowAnalysis& analysis, size_t current_index);
     static std::pair<std::string, TCPFlow> getNextFlow(const TCPFlowAnalysis& analysis, size_t current_index);
     static std::pair<std::string, TCPFlow> getPrevFlow(const TCPFlowAnalysis& analysis, size_t current_index);
+    // Returns the number of flows analyzed in a capture file.
     static size_t getFlowCount(const TCPFlowAnalysis& analysis);
     
 private:
-    // Generate flow ID from packet information
     static std::string generateFlowId(const ParsedPacket& packet);
-    
-    // Generate reverse flow ID (for bidirectional analysis)
     static std::string generateReverseFlowId(const ParsedPacket& packet);
-    
-    // Check if packet is a retransmission
     static bool isRetransmission(const ParsedPacket& packet, const TCPFlow& flow);
-    
-    // Update flow with packet information
     static void updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool is_reverse);
 };
 
+#endif

@@ -101,8 +101,8 @@ L3Info L3Parser::parse_ipv6(const std::vector<uint8_t>& packet_data, size_t star
     result.flow_label = version_tc_fl & 0x000FFFFF;
     result.header_length = 40; // Base IPv6 header
     result.next_layer_offset = start_offset + 40;
-    result.has_options = false; // TODO: Check for extension headers
-    result.is_fragmented = false; // TODO: Check fragment extension header
+    result.has_options = false;
+    result.is_fragmented = false;
     
     // Create string representation.
     std::ostringstream oss;

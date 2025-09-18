@@ -176,7 +176,6 @@ std::string L4Parser::serialize(const L4Info& l4_info) {
             oss << ";" << static_cast<int>(l4_info.icmp_type) << ";" << static_cast<int>(l4_info.icmp_code);
             break;
         default:
-            // No additional data for other protocols.
             break;
     }
     
@@ -237,7 +236,6 @@ L4Info L4Parser::deserialize(const std::string& layer_string) {
                 }
                 break;
             default:
-                // No additional data for other protocols.
                 break;
         }
     }
@@ -253,6 +251,7 @@ std::string L4Parser::get_protocol_name(uint8_t protocol) {
         case PROTO_ICMPV6: return "ICMPv6";
         case PROTO_OSPF: return "OSPF";
         case PROTO_SCTP: return "SCTP";
+        case PROTO_UNKNOWN: return "Unknown";
         default: return "proto-" + std::to_string(protocol);
     }
 }
@@ -265,6 +264,5 @@ L4Parser::Protocol L4Parser::get_protocol_type(const std::string& protocol_name)
     if (protocol_name == "OSPF") return PROTO_OSPF;
     if (protocol_name == "SCTP") return PROTO_SCTP;
     
-    // Default to ICMP for unknown protocols.
-    return PROTO_ICMP;
+    return PROTO_UNKNOWN;
 }

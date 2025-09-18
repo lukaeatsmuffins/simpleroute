@@ -30,7 +30,7 @@ TCPFlowAnalysis TCPFlowAnalyzer::analyzeFlows(const std::string& filename) {
         std::string flow_id = generateFlowId(packet);
         std::string reverse_flow_id = generateReverseFlowId(packet);
         
-        // Check if this is a reverse flow.
+        // Check for a reverse flow.
         bool is_reverse = false;
         TCPFlow* flow = nullptr;
         
@@ -51,7 +51,6 @@ TCPFlowAnalysis TCPFlowAnalyzer::analyzeFlows(const std::string& filename) {
             analysis.flow_ids.push_back(flow_id);
             flow = &analysis.flows[flow_id];
             
-            // Initialize the new flow.
             flow->flow_id = flow_id;
             flow->src_ip = packet.src_ip();
             flow->dst_ip = packet.dst_ip();
@@ -115,7 +114,7 @@ bool TCPFlowAnalyzer::isRetransmission(const ParsedPacket& packet, const TCPFlow
 }
 
 void TCPFlowAnalyzer::updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool is_reverse) {
-    // Update packet counts
+    // Update packet counts.
     if (is_reverse) {
         flow.packets_received++;
         flow.bytes_received += packet.total_length;
@@ -124,7 +123,7 @@ void TCPFlowAnalyzer::updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool
         flow.bytes_sent += packet.total_length;
     }
     
-    // Update TCP flag counts
+    // Update TCP flag counts.
     std::string flags = packet.tcp_flags();
     if (flags.find('S') != std::string::npos) {
         flow.syn_packets++;
@@ -144,7 +143,7 @@ void TCPFlowAnalyzer::updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool
         flow.connection_closed = true;
     }
     
-    // Update window size tracking.
+    // Update window size.
     if (packet.l4.window_size > 0) {
         if (flow.max_window_size == 0 || packet.l4.window_size > flow.max_window_size) {
             flow.max_window_size = packet.l4.window_size;
@@ -154,7 +153,7 @@ void TCPFlowAnalyzer::updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool
         }
     }
     
-    // Check for retransmissions first.
+    // Update retransmission count.
     if (isRetransmission(packet, flow)) {
         flow.retransmissions++;
     }
