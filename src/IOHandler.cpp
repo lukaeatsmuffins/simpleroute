@@ -133,6 +133,12 @@ bool IOHandler::setBufferSize(size_t buffer_size) {
     return true;
 }
 
+
+size_t IOHandler::getBufferSize() const {
+    std::lock_guard<std::mutex> lock(buffer_mutex_);
+    return buffer_size_;
+}
+
 void IOHandler::writePacket(const std::vector<uint8_t>& packet) {
     std::unique_lock<std::mutex> lock(buffer_mutex_);
     

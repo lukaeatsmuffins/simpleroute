@@ -38,6 +38,9 @@ public:
 
     // Set the size of the buffer. Returns true if successful.
     bool setBufferSize(size_t buffer_size);
+
+    // Get the size of the buffer.
+    size_t getBufferSize() const;
     
 private:
     // Private constructor for singleton
