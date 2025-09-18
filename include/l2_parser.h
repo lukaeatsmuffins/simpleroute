@@ -1,10 +1,10 @@
-#pragma once
+#ifndef L2_PARSER_H
+#define L2_PARSER_H
 
 #include <string>
 #include <vector>
 #include <stdint.h>
 
-// Layer 2 (Ethernet) information structure.
 struct L2Info {
     // Parsing success.
     bool parsed;                    // Whether parsing was successful
@@ -31,7 +31,6 @@ struct L2Info {
     std::string info_string;        // Formatted string representation
 };
 
-// Layer 2 (Ethernet) Parser - Stateless parser for Ethernet frames and VLAN tags.
 class L2Parser {
 public:
     // Parse Ethernet frame and return detailed information.
@@ -50,3 +49,5 @@ private:
     // Get protocol name from EtherType.
     static std::string get_protocol_name(uint16_t ether_type);
 };
+
+#endif

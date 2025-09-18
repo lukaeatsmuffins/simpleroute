@@ -1,10 +1,10 @@
-#pragma once
+#ifndef L4_PARSER_H
+#define L4_PARSER_H
 
 #include <string>
 #include <vector>
 #include <stdint.h>
 
-// Layer 4 (Transport) information structure.
 struct L4Info {
     // Parsing success.
     bool parsed;                    // Whether parsing was successful
@@ -44,7 +44,6 @@ struct L4Info {
     std::string info_string;        // Formatted string representation
 };
 
-// Layer 4 (Transport) Parser - Stateless parser for TCP, UDP, and ICMP headers.
 class L4Parser {
 public:
     // Protocol enumeration for L4 protocols.
@@ -89,3 +88,5 @@ private:
     // Get protocol type enum from protocol name.
     static Protocol get_protocol_type(const std::string& protocol_name);
 };
+
+#endif

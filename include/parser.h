@@ -1,4 +1,5 @@
-#pragma once
+#ifndef PARSER_H
+#define PARSER_H
 
 #include "l2_parser.h"
 #include "l3_parser.h"
@@ -42,3 +43,5 @@ private:
     static void calculate_payload_info(const std::vector<uint8_t>& packet_data,
                                       size_t start_offset, ParsedPacket& result);
 };
+
+#endif

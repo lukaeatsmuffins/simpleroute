@@ -1,4 +1,5 @@
-#pragma once
+#ifndef IOHANDLER_H
+#define IOHANDLER_H
 
 #include <string>
 #include <vector>
@@ -84,3 +85,5 @@ private:
     // Friend class for unique_ptr access to destructor.
     friend class std::default_delete<IOHandler>;
 };
+
+#endif

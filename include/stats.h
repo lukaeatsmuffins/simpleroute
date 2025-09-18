@@ -1,4 +1,5 @@
-#pragma once
+#ifndef STATS_H
+#define STATS_H
 
 #include "parser.h"
 #include <string>
@@ -84,3 +85,5 @@ private:
         GroupBy group_by
     ) const;
 };
+
+#endif

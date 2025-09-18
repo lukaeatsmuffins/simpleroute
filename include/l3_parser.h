@@ -1,10 +1,10 @@
-#pragma once
+#ifndef L3_PARSER_H
+#define L3_PARSER_H
 
 #include <string>
 #include <vector>
 #include <stdint.h>
 
-// Layer 3 (IP) information structure.
 struct L3Info {
     // Parsing success.
     bool parsed;                    // Whether parsing was successful
@@ -42,7 +42,6 @@ struct L3Info {
     std::string info_string;        // Formatted string representation
 };
 
-// Layer 3 (IP) Parser - Stateless parser for IPv4 and IPv6 headers.
 class L3Parser {
 public:
     // IP version enumeration.
@@ -78,3 +77,5 @@ private:
     // Check if IPv4 packet is fragmented.
     static bool is_ipv4_fragmented(const uint16_t frag_off);
 };
+
+#endif
