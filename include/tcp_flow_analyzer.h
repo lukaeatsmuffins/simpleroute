@@ -4,6 +4,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <set>
 #include <stdint.h>
 
 // TCP Flow Analysis - Dedicated class for analyzing TCP connections and flows
@@ -39,6 +40,9 @@ struct TCPFlow {
     // Timing information (if available)
     uint64_t first_packet_time;       // Timestamp of first packet
     uint64_t last_packet_time;        // Timestamp of last packet
+    
+    // Retransmission detection
+    std::set<uint32_t> seen_sequence_numbers;  // Track seen sequence numbers
     
     // Constructor
     TCPFlow() : src_port(0), dst_port(0), packets_sent(0), packets_received(0),

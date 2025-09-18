@@ -108,19 +108,10 @@ std::string TCPFlowAnalyzer::generateReverseFlowId(const ParsedPacket& packet) {
 }
 
 bool TCPFlowAnalyzer::isRetransmission(const ParsedPacket& packet, const TCPFlow& flow) {
-    // Simple retransmission detection based on sequence numbers
-    // This is a basic implementation - more sophisticated detection could be added
-    
-    // For now, we'll use a simple heuristic:
-    // If we see the same sequence number multiple times, it might be a retransmission
-    // This is not perfect but gives a basic indication
-    
-    // TODO: Implement more sophisticated retransmission detection
-    // - Track sequence numbers per flow
-    // - Detect duplicate sequence numbers
-    // - Consider TCP window and acknowledgment numbers
-    
-    return false; // Placeholder - implement proper retransmission detection
+    if (packet.l4.sequence_number == 0) {
+        return false;
+    }
+    return flow.seen_sequence_numbers.find(packet.l4.sequence_number) != flow.seen_sequence_numbers.end();
 }
 
 void TCPFlowAnalyzer::updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool is_reverse) {
@@ -163,9 +154,13 @@ void TCPFlowAnalyzer::updateFlow(TCPFlow& flow, const ParsedPacket& packet, bool
         }
     }
     
-    // Check for retransmissions.
+    // Check for retransmissions first.
     if (isRetransmission(packet, flow)) {
         flow.retransmissions++;
+    }
+    
+    if (packet.l4.sequence_number > 0) {
+        flow.seen_sequence_numbers.insert(packet.l4.sequence_number);
     }
 }
 
