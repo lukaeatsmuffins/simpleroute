@@ -8,6 +8,10 @@
 
 // Packet Statistics Collection Class - Provides two main modes: Filter Mode and Grouping Mode.
 
+// TODO:
+// Verify if filter is working correctly.
+// Verify if length filter works with payload or total length.
+
 // Simple statistics for filtered packets.
 struct FilterStats {
     uint64_t packet_count = 0;

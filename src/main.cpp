@@ -10,6 +10,8 @@
 #include <cstdio>
 #include <vector>
 #include <fstream>
+#include <string>
+#include <algorithm>
 
 #define MAX_BUFFER_SIZE 10000
 #define MAX_CAPTURE_TIME 120
@@ -56,12 +58,30 @@ void handleGetStats();
 
 void clearScreen() { std::cout << "\033[2J\033[1;1H"; }
 
-int main() {
+// Command line argument parsing functions
+void printUsage(const char* program_name);
+bool parseCommandLineArgs(int argc, char* argv[]);
+void runNonInteractiveMode();
+
+int main(int argc, char* argv[]) {
+    if (argc > 1) {
+        if (parseCommandLineArgs(argc, argv)) {
+            runNonInteractiveMode();
+            return 0;
+        } else {
+            return 1;
+        }
+    }
+    
+    // Run interactive mode if no arguments provided.
     handleConsole();
+    return 0;
 }
 
 
 void handleConsole() {
+    std::cout << "Packet Sniffer - Interactive Mode\n";
+    std::cout << "=====================================\n\n";
     // Prompt the user for whether or not they want to capture packets, set a filter, or get stats.
 
     while(true) {
@@ -294,7 +314,14 @@ void handleSetFilter() {
 }
 
 void handleGetStats() {
-
+    clearScreen();
+    if (globals_.capture_file_name.empty()) {
+        std::cerr << "ERROR: Capture file name is not set" << std::endl;
+        return;
+    }
+    std::cout << "================" << std::endl;
+    std::cout << "Stats" << std::endl;
+    std::cout << "================" << std::endl;
     FilterStats stats = globals_.stats_.applyFilter(globals_.capture_file_name);
     std::cout << "Stats: " 
               << stats.packet_count 
@@ -302,4 +329,165 @@ void handleGetStats() {
               << stats.total_bytes 
               << " bytes" 
               << std::endl;
+
+    std::cout << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::SRC_IP)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::DST_IP)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::SRC_PORT)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::DST_PORT)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::PACKET_SIZE)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::SRC_MAC)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::DST_MAC)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::VLAN_ID)
+              << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::PROTOCOL)
+              << std::endl;
+
+    std::cout << "Type 'E' to exit: " << std::endl;
+    std::string input;
+    while (true) {
+        std::cin >> input;
+        if (input == "E" || input == "e") {
+            return;
+        }
+    }
+}
+
+void printUsage(const char* program_name) {
+    std::cout << "Usage: " << program_name << " [OPTIONS]\n\n";
+    std::cout << "Packet Sniffer - Capture and analyze network packets\n\n";
+    std::cout << "OPTIONS:\n";
+    std::cout << "  --help                    Show this help message\n";
+    std::cout << "  --interface <name>         Network interface to capture from (required)\n";
+    std::cout << "  --capture-time <seconds>   Duration to capture packets (default: 30)\n";
+    std::cout << "  --buffer-size <size>       Capture buffer size (default: 1000)\n";
+    std::cout << "  --output <filename>        Output file for captured packets (required)\n";
+    std::cout << "  --filter <filter_string>   Filter packets (e.g., 'protocol=tcp port=80')\n";
+    std::cout << "  --stats-only              Only show statistics from existing capture file\n\n";
+    std::cout << "EXAMPLES:\n";
+    std::cout << "  " << program_name << " --interface eth0 --capture-time 60 --output capture.txt\n";
+    std::cout << "  " << program_name << " --interface wlan0 --filter 'protocol=tcp' --output tcp_capture.txt\n";
+    std::cout << "  " << program_name << " --stats-only --output capture.txt\n";
+    std::cout << "  " << program_name << " --interface eth0 --filter 'dst_port=25565' --capture-time 120 --output minecraft.txt\n\n";
+    std::cout << "FILTER SYNTAX:\n";
+    std::cout << "  protocol=<name>           Filter by protocol (tcp, udp, icmp, etc.)\n";
+    std::cout << "  src_ip=<address>          Filter by source IP address\n";
+    std::cout << "  dst_ip=<address>          Filter by destination IP address\n";
+    std::cout << "  src_port=<port>           Filter by source port\n";
+    std::cout << "  dst_port=<port>           Filter by destination port\n";
+    std::cout << "  src_mac=<address>         Filter by source MAC address\n";
+    std::cout << "  dst_mac=<address>         Filter by destination MAC address\n";
+    std::cout << "  vlan_id=<id>              Filter by VLAN ID\n";
+    std::cout << "  min_size=<bytes>          Filter by minimum packet size\n";
+    std::cout << "  max_size=<bytes>          Filter by maximum packet size\n\n";
+}
+
+bool parseCommandLineArgs(int argc, char* argv[]) {
+    bool stats_only = false;
+    bool interface_set = false;
+    bool output_set = false;
+    
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        
+        if (arg == "--help" || arg == "-h") {
+            printUsage(argv[0]);
+            return false;
+        }
+        else if (arg == "--stats-only") {
+            stats_only = true;
+        }
+        else if (arg == "--interface" && i + 1 < argc) {
+            globals_.capture_interface = argv[++i];
+            interface_set = true;
+        }
+        else if (arg == "--capture-time" && i + 1 < argc) {
+            int time = std::stoi(argv[++i]);
+            if (time <= 0 || time > MAX_CAPTURE_TIME) {
+                std::cerr << "ERROR: Capture time must be between 1 and " << MAX_CAPTURE_TIME << " seconds\n";
+                return false;
+            }
+            globals_.capture_time = time;
+        }
+        else if (arg == "--buffer-size" && i + 1 < argc) {
+            int buffer_size = std::stoi(argv[++i]);
+            if (buffer_size <= 0 || buffer_size > MAX_BUFFER_SIZE) {
+                std::cerr << "ERROR: Buffer size must be between 1 and " << MAX_BUFFER_SIZE << "\n";
+                return false;
+            }
+            IOHandler& handler = IOHandler::getInstance();
+            bool buffer_set = handler.setBufferSize(buffer_size);
+        
+            if (!buffer_set) {
+                std::cerr << "ERROR: Failed to set buffer size" << std::endl;
+                return false;
+            }
+            globals_.buffer_size = buffer_size;
+        }
+        else if (arg == "--output" && i + 1 < argc) {
+            globals_.capture_file_name = argv[++i];
+            output_set = true;
+        }
+        else if (arg == "--filter" && i + 1 < argc) {
+            std::string filter = argv[++i];
+            if (!globals_.stats_.setFilter(filter)) {
+                std::cerr << "ERROR: Invalid filter syntax: " << filter << "\n";
+                return false;
+            }
+        }
+        else {
+            std::cerr << "ERROR: Unknown argument: " << arg << "\n";
+            std::cerr << "Use --help for usage information\n";
+            return false;
+        }
+    }
+    
+    // Set defaults if not specified.
+    if (globals_.capture_time == -1) {
+        globals_.capture_time = IOHANDLER_DEFAULT_CAPTURE_TIME;
+    }
+    if (globals_.buffer_size == -1) {
+        globals_.buffer_size = IOHANDLER_DEFAULT_BUFFER_SIZE;
+    }
+    
+    // Validate required arguments.
+    if (stats_only) {
+        if (!output_set) {
+            std::cerr << "ERROR: --output is required for --stats-only mode\n";
+            return false;
+        }
+    } else {
+        if (!interface_set) {
+            std::cerr << "ERROR: --interface is required for packet capture\n";
+            return false;
+        }
+        if (!output_set) {
+            std::cerr << "ERROR: --output is required for packet capture\n";
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+void runNonInteractiveMode() {
+    std::cout << "Packet Sniffer - Non-Interactive Mode\n";
+    std::cout << "=====================================\n\n";
+    
+    // Check if we're in stats-only mode.
+    if (globals_.capture_file_name.empty() == false && 
+        globals_.capture_interface.empty()) {
+        std::cout << "Showing statistics from: " << globals_.capture_file_name << "\n\n";
+        handleGetStats();
+        return;
+    }
+    
+    std::cout << "Configuration:\n";
+    std::cout << "  Interface: " << globals_.capture_interface << "\n";
+    std::cout << "  Capture Time: " << globals_.capture_time << " seconds\n";
+    std::cout << "  Buffer Size: " << globals_.buffer_size << "\n";
+    std::cout << "  Output File: " << globals_.capture_file_name << "\n";
+    
+    handlePacketCapture();
+    
+    std::cout << "\nCapture completed. Showing statistics...\n\n";
+    handleGetStats();
 }

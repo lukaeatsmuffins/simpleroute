@@ -2,6 +2,7 @@
 #include <sstream>
 #include <algorithm>
 #include <cctype>
+#include <iostream>
 
 ParsedPacket Parser::parse_packet(const std::vector<uint8_t>& packet_data, size_t start_offset) {
     ParsedPacket result = {};
@@ -294,13 +295,18 @@ ParsedPacket Parser::deserialize_packet(const std::string& line) {
             current_layer += c;
         }
     }
+
+    // Add the META layer if it exists.
+    if (!current_layer.empty()) {
+        layers.push_back(current_layer);
+    }
     
     // Deserialize layers by index (L2, L3, L4, META).
     if (layers.size() >= 1) result.l2 = L2Parser::deserialize(layers[0]);
     if (layers.size() >= 2) result.l3 = L3Parser::deserialize(layers[1]);
     if (layers.size() >= 3) result.l4 = L4Parser::deserialize(layers[2]);
     
-    // Handle metadata (last layer).
+    // Handle metadata (META layer).
     if (layers.size() >= 4 && layers[3].substr(0, 4) == "META") {
         std::vector<std::string> fields;
         std::string current_field;

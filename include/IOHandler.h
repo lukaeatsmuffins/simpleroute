@@ -10,6 +10,7 @@
 #include <condition_variable>
 
 #define IOHANDLER_DEFAULT_BUFFER_SIZE 1000
+#define IOHANDLER_DEFAULT_CAPTURE_TIME 30
 #define IOHANDLER_POLL_TIMEOUT_MS 1000
 // IOHandler - Singleton class for raw packet capture.
 
