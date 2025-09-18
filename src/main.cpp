@@ -4,6 +4,7 @@
 #include "l4_parser.h"
 #include "parser.h"
 #include "stats.h"
+#include "tcp_flow_analyzer.h"
 #include <iostream>
 #include <thread>
 #include <chrono>
@@ -21,7 +22,8 @@ enum InputOption {
     SET_CAPTURE_OPTIONS = 2,
     SET_FILTER = 3,
     GET_STATS = 4,
-    CONSOLE_EXIT = 5,
+    ANALYZE_FLOWS = 5,
+    CONSOLE_EXIT = 6,
 };
 
 enum CaptureOption {
@@ -55,10 +57,14 @@ void handleSetCaptureFileName();
 void handleSetFilter();
 
 void handleGetStats();
+void handleAnalyzeFlows();
+void browseFlowsInteractive(const TCPFlowAnalysis& analysis);
+int handleFlowNavigation(const TCPFlowAnalysis& analysis, size_t& current_flow);
+void printFlowData(const TCPFlowAnalysis& analysis, size_t current_flow, size_t total_flows);
 
 void clearScreen() { std::cout << "\033[2J\033[1;1H"; }
+void pressEnterToContinue();
 
-// Command line argument parsing functions
 void printUsage(const char* program_name);
 bool parseCommandLineArgs(int argc, char* argv[]);
 void runNonInteractiveMode();
@@ -82,7 +88,6 @@ int main(int argc, char* argv[]) {
 void handleConsole() {
     std::cout << "Packet Sniffer - Interactive Mode\n";
     std::cout << "=====================================\n\n";
-    // Prompt the user for whether or not they want to capture packets, set a filter, or get stats.
 
     while(true) {
         clearScreen();
@@ -91,31 +96,34 @@ void handleConsole() {
                   << "2. Set capture options" << std::endl
                   << "3. Set a filter" << std::endl
                   << "4. Get stats" << std::endl
-                  << "5. Exit" << std::endl;
+                  << "5. Analyze flows" << std::endl
+                  << "6. Exit" << std::endl;
 
         int choice;
         std::cin >> choice;
 
         switch (static_cast<InputOption>(choice)) {
-            case CAPTURE_PACKETS:
+            case InputOption::CAPTURE_PACKETS:
                 handlePacketCapture();
                 break;
-            case SET_CAPTURE_OPTIONS:
+            case InputOption::SET_CAPTURE_OPTIONS:
                 handleSetCaptureOptions();
-                break;
-            case SET_FILTER:
+                continue;
+            case InputOption::SET_FILTER:
                 handleSetFilter();
-                break;
-            case GET_STATS:
+                continue;
+            case InputOption::GET_STATS:
                 handleGetStats();
                 break;
-            case CONSOLE_EXIT:
+            case InputOption::ANALYZE_FLOWS:
+                handleAnalyzeFlows();
+                break;
+            case InputOption::CONSOLE_EXIT:
                 return;
             default:
                 std::cout << "Invalid choice" << std::endl;
-                break;
+                pressEnterToContinue();
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
     }
 }
 
@@ -222,25 +230,25 @@ void handleSetCaptureOptions() {
         std::cin >> choice;
 
         switch (static_cast<CaptureOption>(choice)) {
-            case SET_CAPTURE_INTERFACE:
+            case CaptureOption::SET_CAPTURE_INTERFACE:
                 handleSetCaptureInterface();
                 break;
-            case SET_CAPTURE_BUFFER_SIZE:
+            case CaptureOption::SET_CAPTURE_BUFFER_SIZE:
                 handleSetBufferSize();
                 break;
-            case SET_CAPTURE_TIME:
+            case CaptureOption::SET_CAPTURE_TIME:
                 handleSetCaptureTime();
                 break;
-            case SET_CAPTURE_FILE_NAME:
+            case CaptureOption::SET_CAPTURE_FILE_NAME:
                 handleSetCaptureFileName();
                 break;
-            case CAPTURE_OPTION_EXIT:
+            case CaptureOption::CAPTURE_OPTION_EXIT:
                 return;
             default:
                 std::cout << "Invalid choice" << std::endl;
                 break;
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        pressEnterToContinue();
     }
 }
 
@@ -306,17 +314,20 @@ void handleSetCaptureFileName() {
 void handleSetFilter() {
     std::cout << "Enter filter: ";
     std::string filter;
-    std::cin >> filter;
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::getline(std::cin, filter);
     if (!globals_.stats_.setFilter(filter)) {
         std::cerr << "ERROR: Failed to set filter" << std::endl;
         return;
     }
+    std::cout << "Filter set successfully" << std::endl;
 }
 
 void handleGetStats() {
     clearScreen();
     if (globals_.capture_file_name.empty()) {
         std::cerr << "ERROR: Capture file name is not set" << std::endl;
+        pressEnterToContinue();
         return;
     }
     std::cout << "================" << std::endl;
@@ -340,15 +351,36 @@ void handleGetStats() {
               << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::VLAN_ID)
               << globals_.stats_.getGroupingReport(globals_.capture_file_name, GroupBy::PROTOCOL)
               << std::endl;
+    pressEnterToContinue();
+}
 
-    std::cout << "Type 'E' to exit: " << std::endl;
+void pressEnterToContinue() {
+    std::cout << "Press Enter to continue..." << std::endl;
     std::string input;
-    while (true) {
-        std::cin >> input;
-        if (input == "E" || input == "e") {
-            return;
-        }
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::getline(std::cin, input);
+}
+
+void handleAnalyzeFlows() {
+    clearScreen();
+    if (globals_.capture_file_name.empty()) {
+        std::cerr << "ERROR: Capture file name is not set" << std::endl;
+        return;
     }
+    
+    std::cout << "================" << std::endl;
+    std::cout << "TCP Flow Analysis" << std::endl;
+    std::cout << "================" << std::endl;
+    
+    TCPFlowAnalysis analysis = TCPFlowAnalyzer::analyzeFlows(globals_.capture_file_name);
+    
+    std::cout << TCPFlowAnalyzer::generateFlowReport(analysis) << std::endl;
+    
+    std::cout << "\nPress Enter to start interactive flow browsing...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    std::cin.get();
+    
+    browseFlowsInteractive(analysis);
 }
 
 void printUsage(const char* program_name) {
@@ -361,12 +393,14 @@ void printUsage(const char* program_name) {
     std::cout << "  --buffer-size <size>       Capture buffer size (default: 1000)\n";
     std::cout << "  --output <filename>        Output file for captured packets (required)\n";
     std::cout << "  --filter <filter_string>   Filter packets (e.g., 'protocol=tcp port=80')\n";
-    std::cout << "  --stats-only              Only show statistics from existing capture file\n\n";
+    std::cout << "  --stats-only              Only show statistics from existing capture file\n";
+    std::cout << "  --analyze-flows           Analyze TCP flows from capture file\n\n";
     std::cout << "EXAMPLES:\n";
     std::cout << "  " << program_name << " --interface eth0 --capture-time 60 --output capture.txt\n";
     std::cout << "  " << program_name << " --interface wlan0 --filter 'protocol=tcp' --output tcp_capture.txt\n";
     std::cout << "  " << program_name << " --stats-only --output capture.txt\n";
-    std::cout << "  " << program_name << " --interface eth0 --filter 'dst_port=25565' --capture-time 120 --output minecraft.txt\n\n";
+    std::cout << "  " << program_name << " --interface eth0 --filter 'dst_port=25565' --capture-time 120 --output minecraft.txt\n";
+    std::cout << "  " << program_name << " --analyze-flows --output tcp_flows.txt\n\n";
     std::cout << "FILTER SYNTAX:\n";
     std::cout << "  protocol=<name>           Filter by protocol (tcp, udp, icmp, etc.)\n";
     std::cout << "  src_ip=<address>          Filter by source IP address\n";
@@ -380,8 +414,13 @@ void printUsage(const char* program_name) {
     std::cout << "  max_size=<bytes>          Filter by maximum packet size\n\n";
 }
 
+enum class AnalysisMode {
+    CAPTURE_AND_STATS,
+    STATS_ONLY,
+    ANALYZE_FLOWS
+} analysis_mode = AnalysisMode::CAPTURE_AND_STATS;
+
 bool parseCommandLineArgs(int argc, char* argv[]) {
-    bool stats_only = false;
     bool interface_set = false;
     bool output_set = false;
     
@@ -393,7 +432,10 @@ bool parseCommandLineArgs(int argc, char* argv[]) {
             return false;
         }
         else if (arg == "--stats-only") {
-            stats_only = true;
+            analysis_mode = AnalysisMode::STATS_ONLY;
+        }
+        else if (arg == "--analyze-flows") {
+            analysis_mode = AnalysisMode::ANALYZE_FLOWS;
         }
         else if (arg == "--interface" && i + 1 < argc) {
             globals_.capture_interface = argv[++i];
@@ -449,9 +491,9 @@ bool parseCommandLineArgs(int argc, char* argv[]) {
     }
     
     // Validate required arguments.
-    if (stats_only) {
+    if (analysis_mode == AnalysisMode::STATS_ONLY || analysis_mode == AnalysisMode::ANALYZE_FLOWS) {
         if (!output_set) {
-            std::cerr << "ERROR: --output is required for --stats-only mode\n";
+            std::cerr << "ERROR: --output is required for --stats-only and --analyze-flows modes\n";
             return false;
         }
     } else {
@@ -472,22 +514,117 @@ void runNonInteractiveMode() {
     std::cout << "Packet Sniffer - Non-Interactive Mode\n";
     std::cout << "=====================================\n\n";
     
-    // Check if we're in stats-only mode.
-    if (globals_.capture_file_name.empty() == false && 
-        globals_.capture_interface.empty()) {
-        std::cout << "Showing statistics from: " << globals_.capture_file_name << "\n\n";
-        handleGetStats();
+    switch (analysis_mode) {
+        case AnalysisMode::STATS_ONLY:
+            std::cout << "Showing statistics from: " << globals_.capture_file_name << "\n\n";
+            handleGetStats();
+            break;
+            
+        case AnalysisMode::ANALYZE_FLOWS:
+            std::cout << "Analyzing TCP flows from: " << globals_.capture_file_name << "\n\n";
+            handleAnalyzeFlows();
+            break;
+            
+        case AnalysisMode::CAPTURE_AND_STATS:
+        default:
+            std::cout << "Configuration:\n";
+            std::cout << "  Interface: " << globals_.capture_interface << "\n";
+            std::cout << "  Capture Time: " << globals_.capture_time << " seconds\n";
+            std::cout << "  Buffer Size: " << globals_.buffer_size << "\n";
+            std::cout << "  Output File: " << globals_.capture_file_name << "\n";
+            if (globals_.stats_.hasActiveFilter()) {
+                std::cout << "  Filter: Active\n";
+            } else {
+                std::cout << "  Filter: None (capture all packets)\n";
+            }
+            
+            handlePacketCapture();
+            
+            std::cout << "\nCapture completed. Showing statistics...\n\n";
+            handleGetStats();
+            break;
+    }
+}
+
+void browseFlowsInteractive(const TCPFlowAnalysis& analysis) {
+    if (analysis.flows.empty()) {
+        std::cout << "No TCP flows found in the capture file." << std::endl;
         return;
     }
     
-    std::cout << "Configuration:\n";
-    std::cout << "  Interface: " << globals_.capture_interface << "\n";
-    std::cout << "  Capture Time: " << globals_.capture_time << " seconds\n";
-    std::cout << "  Buffer Size: " << globals_.buffer_size << "\n";
-    std::cout << "  Output File: " << globals_.capture_file_name << "\n";
+    size_t current_flow = 0;
+    size_t total_flows = TCPFlowAnalyzer::getFlowCount(analysis);
     
-    handlePacketCapture();
+    while (true) {
+        clearScreen();
+        printFlowData(analysis, current_flow, total_flows);
+        if(handleFlowNavigation(analysis, current_flow) == 1) {
+            break;
+        }
+    }
+}
+
+void printFlowData(const TCPFlowAnalysis& analysis, size_t current_flow, size_t total_flows) {
+    std::cout << "================\n";
+    std::cout << "TCP Flow Browser\n";
+    std::cout << "================\n";
+    std::cout << "Flow " << (current_flow + 1) << " of " << total_flows << "\n\n";
     
-    std::cout << "\nCapture completed. Showing statistics...\n\n";
-    handleGetStats();
+    const auto& [flow_id, flow] = TCPFlowAnalyzer::getCurrentFlow(analysis, current_flow);
+    
+    std::cout << "Flow ID: " << flow_id << "\n";
+    std::cout << "Packets: " << (flow.packets_sent + flow.packets_received) 
+                << " (" << flow.packets_sent << " sent, " << flow.packets_received << " received)\n";
+    std::cout << "Bytes: " << (flow.bytes_sent + flow.bytes_received) 
+                << " (" << flow.bytes_sent << " sent, " << flow.bytes_received << " received)\n";
+    std::cout << "TCP Flags: SYN:" << flow.syn_packets 
+                << " SYN-ACK:" << flow.syn_ack_packets 
+                << " ACK:" << flow.ack_packets 
+                << " FIN:" << flow.fin_packets 
+                << " RST:" << flow.rst_packets << "\n";
+    
+    if (flow.retransmissions > 0) {
+        std::cout << "Retransmissions: " << flow.retransmissions << "\n";
+    }
+    
+    std::cout << "Status: " << (flow.connection_established ? "Established" : "Not Established");
+    if (flow.connection_closed) {
+        std::cout << ", Closed";
+    }
+    std::cout << "\n";
+    
+    if (flow.max_window_size > 0) {
+        std::cout << "Window Size: " << flow.min_window_size << " - " << flow.max_window_size << "\n";
+    }
+}
+
+int handleFlowNavigation(const TCPFlowAnalysis& analysis, size_t& current_flow) {
+    std::cout << "\nControls: j=next, k=previous, q=quit\n";
+    std::cout << "Choice: ";
+    
+    char choice;
+    std::cin >> choice;
+    
+    switch (choice) {
+        case 'j':
+        case 'J': {
+            auto [next_flow_id, next_flow] = TCPFlowAnalyzer::getNextFlow(analysis, current_flow);
+            if (!next_flow_id.empty()) {
+                current_flow++;
+            }
+            break;
+        }
+        case 'k':
+        case 'K': {
+            auto [prev_flow_id, prev_flow] = TCPFlowAnalyzer::getPrevFlow(analysis, current_flow);
+            if (!prev_flow_id.empty()) {
+                current_flow--;
+            }
+            break;
+        }
+        case 'q':
+        case 'Q':
+            return 1;
+    }
+    return 0;
 }

@@ -163,7 +163,8 @@ std::string L4Parser::serialize(const L4Info& l4_info) {
     // Add protocol-specific data.
     switch (static_cast<Protocol>(l4_info.protocol_type)) {
         case Protocol::PROTO_TCP:
-            oss << ";" << l4_info.tcp_flags_string << ";" << l4_info.window_size;
+            oss << ";" << l4_info.tcp_flags_string << ";" << l4_info.window_size 
+                << ";" << l4_info.sequence_number << ";" << l4_info.ack_number;
             break;
         case Protocol::PROTO_UDP:
             oss << ";" << l4_info.udp_length;
@@ -216,6 +217,11 @@ L4Info L4Parser::deserialize(const std::string& layer_string) {
                 if (fields.size() >= 5) {
                     result.tcp_flags_string = fields[3];
                     result.window_size = std::stoi(fields[4]);
+                    // New format includes sequence/ack numbers
+                    if (fields.size() >= 7) {
+                        result.sequence_number = std::stoul(fields[5]);
+                        result.ack_number = std::stoul(fields[6]);
+                    }
                 }
                 break;
             case PROTO_UDP:

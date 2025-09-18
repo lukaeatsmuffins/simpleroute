@@ -23,6 +23,10 @@ void Stats::clearFilter() {
 }
 
 bool Stats::parseFilterString(const std::string& filter_string) {
+    if (filter_string.empty()) {
+        return true;
+    }
+
     std::istringstream iss(filter_string);
     std::string token;
     
