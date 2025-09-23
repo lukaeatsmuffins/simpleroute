@@ -170,6 +170,12 @@ std::unordered_map<std::string, uint64_t> Stats::groupPackets(
         if (line.empty()) continue;
         
         ParsedPacket packet = Parser::deserialize_packet(line);
+        
+        // Apply filter if active
+        if (filter_.has_any_filter() && !matchesFilter(packet)) {
+            continue;
+        }
+        
         std::string key = getGroupingKey(packet, group_by);
         groups[key]++;
     }
