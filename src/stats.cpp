@@ -11,7 +11,11 @@ Stats::~Stats() {}
 
 bool Stats::setFilter(const std::string& filter_string) {
     clearFilter();
-    return parseFilterString(filter_string);
+    bool success = parseFilterString(filter_string);
+    if (!success) {
+        clearFilter(); // Clear any partially set filters on error
+    }
+    return success;
 }
 
 void Stats::clearFilter() {
@@ -25,6 +29,7 @@ bool Stats::parseFilterString(const std::string& filter_string) {
 
     std::istringstream iss(filter_string);
     std::string token;
+    std::vector<std::string> unknown_filters;
     
     while (std::getline(iss, token, ' ')) {
         if (token.empty()) continue;
@@ -44,20 +49,62 @@ bool Stats::parseFilterString(const std::string& filter_string) {
         } else if (key == "dst_ip") {
             filter_.dst_ip = value;
         } else if (key == "src_port") {
-            filter_.src_port = static_cast<uint16_t>(std::stoi(value));
+            try {
+                filter_.src_port = static_cast<uint16_t>(std::stoi(value));
+            } catch (const std::invalid_argument&) {
+                std::cerr << "ERROR: Invalid source port value: " << value << std::endl;
+                return false;
+            }
         } else if (key == "dst_port") {
-            filter_.dst_port = static_cast<uint16_t>(std::stoi(value));
+            try {
+                filter_.dst_port = static_cast<uint16_t>(std::stoi(value));
+            } catch (const std::invalid_argument&) {
+                std::cerr << "ERROR: Invalid destination port value: " << value << std::endl;
+                return false;
+            }
         } else if (key == "src_mac") {
             filter_.src_mac = value;
         } else if (key == "dst_mac") {
             filter_.dst_mac = value;
         } else if (key == "vlan_id") {
-            filter_.vlan_id = static_cast<uint16_t>(std::stoi(value));
+            try {
+                filter_.vlan_id = static_cast<uint16_t>(std::stoi(value));
+            } catch (const std::invalid_argument&) {
+                std::cerr << "ERROR: Invalid VLAN ID value: " << value << std::endl;
+                return false;
+            }
         } else if (key == "min_size") {
-            filter_.min_size = std::stoi(value);
+            try {
+                filter_.min_size = std::stoi(value);
+            } catch (const std::invalid_argument&) {
+                std::cerr << "ERROR: Invalid minimum size value: " << value << std::endl;
+                return false;
+            }
         } else if (key == "max_size") {
-            filter_.max_size = std::stoi(value);
+            try {
+                filter_.max_size = std::stoi(value);
+            } catch (const std::invalid_argument&) {
+                std::cerr << "ERROR: Invalid maximum size value: " << value << std::endl;
+                return false;
+            }
+        } else {
+            // Unknown filter name
+            unknown_filters.push_back(key);
         }
+    }
+    
+    // Report unknown filter names
+    if (!unknown_filters.empty()) {
+        std::cerr << "ERROR: Unknown filter name(s): ";
+        for (size_t i = 0; i < unknown_filters.size(); ++i) {
+            std::cerr << unknown_filters[i];
+            if (i < unknown_filters.size() - 1) {
+                std::cerr << ", ";
+            }
+        }
+        std::cerr << std::endl;
+        std::cerr << "Valid filter names: protocol, src_ip, dst_ip, src_port, dst_port, src_mac, dst_mac, vlan_id, min_size, max_size" << std::endl;
+        return false;
     }
     
     return true;
