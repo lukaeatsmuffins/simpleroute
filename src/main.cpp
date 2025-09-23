@@ -253,8 +253,7 @@ void handleSetCaptureOptions() {
 }
 
 void handleSetBufferSize() {
-    std::cout << "Set buffer size:" << std::endl
-              << "Enter buffer size: ";
+    std::cout << "Enter buffer size: ";
     int buffer_size;
     std::cin >> buffer_size;
 
@@ -321,6 +320,7 @@ void handleSetFilter() {
         return;
     }
     std::cout << "Filter set successfully" << std::endl;
+    pressEnterToContinue();
 }
 
 void handleGetStats() {

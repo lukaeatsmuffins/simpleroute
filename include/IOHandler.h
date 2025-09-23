@@ -27,10 +27,14 @@ public:
     
     // Core functionality.
     bool startCapture(const std::string& interface_name);
+
     void stopCapture();
+
     bool isCapturing() const;
+
     // Read and remove packet from the buffer.
     bool readPacket(std::vector<uint8_t>& packet_out);
+
     // Wait for a new packet to be available.
     void waitForData();
 
